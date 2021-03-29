@@ -1,0 +1,4 @@
+name = "GL2017Replication"
+uuid = "da893038-07b7-49d3-be2d-20ddece586a1"
+authors = ["ChristopherSchang <ccs234@cornell.edu>"]
+version = "0.1.0"
