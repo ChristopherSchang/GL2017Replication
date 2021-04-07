@@ -1,7 +1,8 @@
-using GL2017Replication
+include("GL2017Replication.jl")
+using .GL2017Replication
 
-p = ModelParameters()
-grid = ModelGrid()
-policy = ModelSolutions()
-# Run all
-solve_steady_state!(p,grid,policy)
+gl = ModelGL() 
+
+
+# solve model
+EGM!(gl)
