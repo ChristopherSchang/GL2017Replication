@@ -15,7 +15,7 @@ nx      = 12
 mc_productivity  = tauchen(nx, ρ, σϵ, 0.0, 3)
 x               = mc_productivity.state_values
 Pr              = mc_productivity.p
-dist            = stationary_distributions(mc_productivity)[1]
+pr            = stationary_distributions(mc_productivity)[1]
 
 # !!! cannot replicate exact values !!!
 # -----------------------------------------------------------------------------
@@ -27,8 +27,8 @@ single structure holding all parameters and solutions to the model
 @with_kw mutable struct ModelGL
 
     # Deep parameters
-    γ::Float64           = 4        # risk aversion
-    frisch::Float64      = 1        # avg Frisch elast.
+    γ::Float64           = 4.       # risk aversion
+    frisch::Float64      = 1.       # avg Frisch elast.
     r::Float64           = 2.5/400  # ss interest rate  
     
 
@@ -40,7 +40,7 @@ single structure holding all parameters and solutions to the model
     D2_4Y::Float64      = 0.08      # HH debt to annual GDP in terminal ss
 
     η::Float64          = 1/frisch * (1 - NE) / NE
-
+    gameta::Float64     = γ / η;
 
     # Initial guesses for calibrated parameters, NE ~ Y
     β::Float64          = 0.8^(1/4);              # discount factor
@@ -70,7 +70,7 @@ single structure holding all parameters and solutions to the model
     # productivity shock process
     x::Array{Float64, 1}    = x
     Pr::Array{Float64, 2}   = Pr
-    dist::Array{Float64, 1} = dist
+    pr::Array{Float64, 1}   = pr
     
     # Add unemployment
     θ       = [0; exp.(x)... ];
@@ -78,7 +78,12 @@ single structure holding all parameters and solutions to the model
     fin     = 0.8820;        # job-finding probability
     sep     = 0.0573;        # separation probability
 
- 
+
+
+
+
+
+
     # Policies
     cl::Array{Float64,1}                = ones(S);     # consumption at borrowing constraint
     n_pol::Array{Float64,2}             = zeros(S, nb); # labor policy
