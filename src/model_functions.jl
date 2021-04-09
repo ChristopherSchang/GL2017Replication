@@ -5,16 +5,7 @@ using Roots
 using Interpolations
 using LinearAlgebra
 
-""" Function to solve steady-state objects.  
-Inputs
-    p::ModelParameters          :   Structure holding parameter Values
-    grid::ModelSolutions        :   Structure for grids
-    solution::ModelSolutions    :   Structure for solutions
-"""
-function solve_steady_state!(gl::ModelGL)
-    #do stuff
-
-end
+ 
 
 function EGM!(gl::ModelGL)
     
@@ -23,7 +14,7 @@ function EGM!(gl::ModelGL)
     @unpack b_grid,Ic,db = gl                                 # grids
     
     @unpack pr,Pr = gl                                     # processes
-    @unpack cl,n_pol,y_pol,b_pol,tol_dist,mpcs = gl                   # solutions
+    @unpack cl,n_pol,y_pol,b_pol,c_pol,tol_dist,mpcs = gl                   # solutions
     
     
     # new transition matrix
@@ -55,7 +46,7 @@ function EGM!(gl::ModelGL)
     # A) Solve for consumption policy
     #----------------------------------
     # Initial guess for policy function
-    c_pol  = r .* ones(S,nb) .* b_grid'  
+    c_pol[:,:]  = r .* ones(S,nb) .* b_grid'  
     c_pol[c_pol .<= cmin] .= cmin
     c_poli = copy(c_pol)                         
     
@@ -94,7 +85,7 @@ function EGM!(gl::ModelGL)
       dif    = norm(c_poli - c_pol)/(1+norm(c_pol) );
     
       # update
-      c_pol = copy(c_poli);
+      c_pol[:,:] = copy(c_poli);
     end
     
     # Save other policy functions and MPCs
@@ -124,6 +115,56 @@ function find_cl(c, j, b1, b2, r, θ, z, fac, gameta)
     
     return F
 end
+
+function compute_distribution!(gl::ModelGL)
+
+    @unpack b_pol, b_grid,tol_dist,S,nb, JD,Pr,fin,pr,sep = gl
+    
+
+    # new transition matrix
+    Pr = [1-fin  fin.*pr'; 
+    sep .*ones(S-1)  (1-sep) .*Pr];
+
+    # B) Find invariant distribution
+    #----------------------------------
+    # Assign weights to adjacent grid points proportionally to distance
+    idxes       = [ searchsortedlast(b_grid,b_pol[s, b]) for s = 1:size(b_pol)[1], b = 1:size(b_pol)[2] ]
+    weights     = zeros(size(b_pol))
+    for s = 1:size(b_pol)[1]
+    for b = 1:size(b_pol)[2]
+        idx             = idxes[s,b]
+        idx_prime       = maximum(  [ idx+1,size(b_pol)[2] ]    )
+        db              = maximum(  [ b_grid[idx_prime] - b_grid[idx]  , eps() ] )
+        weights[s,b]    = ( b_pol[s,idx]  - b_grid[idx] ) / db;
+    end
+    end
+ 
+    # Iterate asset transition matrix starting from uniform distribution
+    dif = 1;
+    iter =1
+    while (dif > tol_dist) && iter < 1000
+        iter += 1
+        JDp = copy(JD)
+        for s = 1:S
+        for b = 1:nb
+            for si = 1:S
+                JDp[si, idxes[s, b]]     = (1 - weights[s, b]) * Pr[s, si] * JD[s, b]  
+                JDp[si, idxes[s, b] + 1] = weights[s, b]       * Pr[s, si] * JD[s, b]  
+            end
+        end
+        end
+
+        # check convergence
+        dif = norm( JDp - JD ) /( 1+norm(JD) )
+        println(dif)
+
+        # make sure that distribution integrates to 1
+        JD[:,:] = JDp / sum( JDp );
+    end
+
+ 
+end
+
 
 
 

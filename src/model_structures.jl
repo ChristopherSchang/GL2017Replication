@@ -79,17 +79,18 @@ single structure holding all parameters and solutions to the model
     sep     = 0.0573;        # separation probability
 
 
-
-
-
-
-
     # Policies
     cl::Array{Float64,1}                = ones(S);     # consumption at borrowing constraint
     n_pol::Array{Float64,2}             = zeros(S, nb); # labor policy
     y_pol::Array{Float64,2}             = zeros(S, nb); # production policy
     b_pol::Array{Float64,2}             = zeros(S, nb); # savings policy
+    c_pol::Array{Float64,2}             = zeros(S, nb); # consumption policy
     mpcs::Array{Float64,2}              = zeros(S, nb); # MPCs
+
+    # Simulation
+    JD::Array{Float64, 2}               = ones(S, nb) / (S+nb); # Joint compute_distribution
+    
+
  
 end
 

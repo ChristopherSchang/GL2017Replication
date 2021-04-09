@@ -1,16 +1,35 @@
 include("GL2017Replication.jl")
 using .GL2017Replication
 
-
-
+# Load model structure
 gl = ModelGL() 
 
 # solve model
 EGM!(gl)
 
-# plot policy
+# Compute invariant joint distribution
+compute_distribution!(gl)
+
+
+# plot results
 using Plots
 plotly()
+using Parameters
+@unpack b_grid,c_pol,n_pol,b_pol,JD = gl
 
-plot(gl.b_grid,gl.b_pol[[1,5,12],:]',xlabel="bonds",ylabel="bond policy",label=["s=1" "s=5" "s=12"])
-plot!(gl.b_grid,gl.b_grid,linestyle=:dot, label="45°")
+
+# From paper:   Figure 1
+Y1 = 1. # !!! made up
+plot(b_grid/(4*Y1), c_pol[2,:])
+plot!(b_grid/(4*Y1), c_pol[8,:])
+title!("consumption") 
+
+plot(b_grid/(4*Y1), n_pol[2,:])
+plot!(b_grid/(4*Y1), n_pol[8,:]) 
+title!("labor supply") 
+
+plot(b_grid/(4*Y1), b_pol[2,:])
+plot!(b_grid/(4*Y1), b_pol[8,:]) 
+title!("bond policy") 
+ 
+
