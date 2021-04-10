@@ -15,7 +15,7 @@ nx      = 12
 mc_productivity  = tauchen(nx, ρ, σϵ, 0.0, 3)
 x               = mc_productivity.state_values
 Pr              = mc_productivity.p
-pr            = stationary_distributions(mc_productivity)[1]
+pr              = stationary_distributions(mc_productivity)[1]
 
 # !!! cannot replicate exact values !!!
 # -----------------------------------------------------------------------------
@@ -48,7 +48,7 @@ single structure holding all parameters and solutions to the model
     B::Float64          = B_4Y  * NE * 4;         # net supply of bonds
     ϕ₁::Float64         = D1_4Y * NE * 2;         # borrowing constraint in initial ss
     ϕ₂::Float64         = D2_4Y * NE * 2;         # borrowing constraint in terminal ss
-    pssi::Float64       = NE^(-γ) * (1-NE)^η;     # disutility from labor as if representative agent
+    ψ::Float64          = NE^(-γ) * (1-NE)^η;     # disutility from labor as if representative agent
 
     # Numerical parameters
     maxit::Int64        = 500;   # maximum number of iterations in calibration

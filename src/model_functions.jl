@@ -9,7 +9,7 @@ using LinearAlgebra
 
 function EGM!(gl::ModelGL)
     
-    @unpack β, ν,θ, ϕ₁, ϕ₂,η,pssi,γ, B,S,r,nb,gameta,fin,sep = gl    # model parameters
+    @unpack β, ν,θ, ϕ₁, ϕ₂,η,ψ,γ, B,S,r,nb,gameta,fin,sep = gl    # model parameters
     @unpack cmin,tol_pol = gl                           # numerical paras
     @unpack b_grid,Ic,db = gl                                 # grids
     
@@ -32,12 +32,17 @@ function EGM!(gl::ModelGL)
     
     ϕ =  ϕ₁
         
+    # Ensure that constraint is on the grid
+    i = searchsortedlast(b_grid, -ϕ) 
+    b_grid[i] =  - ϕ
+
+
     # Update budget constraint
-    τ   = (pr[1]*ν + r/(1+r)*B) / (1 - pr[1]);  # labor tax
-    z   = [ν, -τ.*ones(S-1)...];                   # full transfer scheme (tau tilde in paper)
+    τ   = (pr[1]*ν + r/(1+r)*B) / (1 - pr[1]);      # labor tax
+    z   = [ν, -τ.*ones(S-1)...];                    # full transfer scheme (tau tilde in paper)
     
     # Find consumption at the lower bound of the state space
-    fac = (pssi ./ θ) .^ (1/η); 
+    fac = (ψ ./ θ) .^ (1/η); 
     for s = 1:S 
         cl[s] =   find_zero( x -> find_cl(x,s, -ϕ, -ϕ, r, θ, z, fac, gameta) 
                                 , (cmin, 100), Bisection()  )
@@ -73,8 +78,6 @@ function EGM!(gl::ModelGL)
             b   = [b_c[1:Ic-1]..., b...];
             c   = [c_c[1:Ic-1]..., c...];
         end
-        # !!! fix order !!!
-        sort!(b)
         itp = extrapolate(    interpolate((b,),c, Gridded(Linear())), Interpolations.Flat() )
         c_poli[s,:] = itp(  b_grid   )
         # interp1(b, c, b_grid, 'linear', 'extrap');
