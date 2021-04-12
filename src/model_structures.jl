@@ -10,9 +10,9 @@ using QuantEcon
 
 nx      = 12
 ρ       = 0.967  # persistence of productivity shock
-σϵ      = 0.017  # standard deviation  of productivity shock
+σϵ      = sqrt(0.017)  # standard deviation  of productivity shock
 
-mc_productivity  = tauchen(nx, ρ, σϵ, 0.0, 3)
+mc_productivity  = tauchen(nx, ρ, σϵ, 0.0, 2)
 x               = mc_productivity.state_values
 Pr              = mc_productivity.p
 pr              = stationary_distributions(mc_productivity)[1]
@@ -39,16 +39,16 @@ single structure holding all parameters and solutions to the model
     D1_4Y::Float64      = 0.18      # HH debt to annual GDP in initial ss
     D2_4Y::Float64      = 0.08      # HH debt to annual GDP in terminal ss
 
-    η::Float64          = 1/frisch * (1 - NE) / NE
+    η::Float64          = 1.5
     gameta::Float64     = γ / η;
 
     # Initial guesses for calibrated parameters, NE ~ Y
-    β::Float64          = 0.8^(1/4);              # discount factor
-    ν::Float64          = νY    * NE;             # UI benefits
+    β::Float64          = 0.9711;                 # discount factor
+    ν::Float64          = 0.1;                    # UI benefits
     B::Float64          = B_4Y  * NE * 4;         # net supply of bonds
-    ϕ₁::Float64         = D1_4Y * NE * 2;         # borrowing constraint in initial ss
+    ϕ₁::Float64         = 0.959;                  # borrowing constraint in initial ss
     ϕ₂::Float64         = D2_4Y * NE * 2;         # borrowing constraint in terminal ss
-    ψ::Float64          = NE^(-γ) * (1-NE)^η;     # disutility from labor as if representative agent
+    ψ::Float64          = 12.48;                  # disutility from labor as if representative agent
 
     # Numerical parameters
     maxit::Int64        = 500;   # maximum number of iterations in calibration
