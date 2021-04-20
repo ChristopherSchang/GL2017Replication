@@ -14,8 +14,8 @@ nx      = 12
 
 mc_productivity  = tauchen(nx, ρ, σϵ, 0.0, 2)
 x               = mc_productivity.state_values
-Pr              = mc_productivity.p
-pr              = stationary_distributions(mc_productivity)[1]
+Pr_             = mc_productivity.p
+pr_              = stationary_distributions(mc_productivity)[1]
 
 # !!! cannot replicate exact values !!!
 # -----------------------------------------------------------------------------
@@ -48,6 +48,7 @@ single structure holding all parameters and solutions to the model
     B::Float64          = B_4Y  * NE * 4;         # net supply of bonds
     ϕ₁::Float64         = 0.959;                  # borrowing constraint in initial ss
     ϕ₂::Float64         = D2_4Y * NE * 2;         # borrowing constraint in terminal ss
+    ϕ::Float64          = ϕ₁
     ψ::Float64          = 12.48;                  # disutility from labor as if representative agent
 
     # Numerical parameters
@@ -68,16 +69,21 @@ single structure holding all parameters and solutions to the model
     db                          = 0.01; # step size for MPC
 
     # productivity shock process
-    x::Array{Float64, 1}    = x
-    Pr::Array{Float64, 2}   = Pr
-    pr::Array{Float64, 1}   = pr
+    x::Array{Float64, 1}     = x
+    Pr_::Array{Float64, 2}   = Pr_
+    pr_::Array{Float64, 1}    = pr_
     
     # Add unemployment
     θ       = [0; exp.(x)... ];
     S       = length(θ);
     fin     = 0.8820;        # job-finding probability
     sep     = 0.0573;        # separation probability
+    
+    # new transition matrix
+    Pr = [1-fin  fin.*pr_'; 
+        sep .*ones(S-1)  (1-sep) .*Pr_];
 
+    pr::Array{Float64,1}      = zeros(S)    
 
     # Policies
     cl::Array{Float64,1}                = ones(S);     # consumption at borrowing constraint

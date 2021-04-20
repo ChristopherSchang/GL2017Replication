@@ -5,38 +5,42 @@ using Roots
 using Interpolations
 using LinearAlgebra
 
+""" 
+Initializes some values for the ModelGL struct. 
+"""
+function initilize!(gl::ModelGL)
+    @unpack fin,sep,tol_dist,b_grid, ϕ,S = gl    # model parameters
+    @unpack pr_,Pr = gl                         # processes
  
 
-function EGM!(gl::ModelGL)
-    
-    @unpack β, ν,θ, ϕ₁, ϕ₂,η,ψ,γ, B,S,r,nb,gameta,fin,sep = gl    # model parameters
-    @unpack cmin,tol_pol = gl                           # numerical paras
-    @unpack b_grid,Ic,db = gl                                 # grids
-    
-    @unpack pr,Pr = gl                                     # processes
-    @unpack cl,n_pol,y_pol,b_pol,c_pol,tol_dist,mpcs = gl                   # solutions
-    
-    
-    # new transition matrix
-    Pr = [1-fin  fin.*pr'; 
-            sep .*ones(S-1)  (1-sep) .*Pr];
-    
     # find new invariate distribution
-    pr  = [0, pr...];
+    gl.pr  = [0, pr_...];
     dif = 1;
     while dif > tol_dist
-        pri = (pr'*Pr)';
-        dif = maximum( abs.(pri .- pr) );
-        pr  = pri;
+        pri = (gl.pr'*Pr)';
+        dif = maximum( abs.(pri .- gl.pr) );
+        gl.pr  = pri;
     end
-    
-    ϕ =  ϕ₁
-        
+
     # Ensure that constraint is on the grid
-    i = searchsortedlast(b_grid, -ϕ) 
-    b_grid[i] =  - ϕ
+    gl.b_grid = gl.bmin .+ ((1:gl.nb)/gl.nb).^2 .* (gl.bmax - gl.bmin); # denser for low values
+    i = maximum(  [  searchsortedlast(gl.b_grid, -gl.ϕ) ,  1] )
+    gl.b_grid[i] =  -gl.ϕ
 
 
+end
+
+""" 
+Calculates optimal policy functions with the EGM algorithm. 
+"""
+function EGM!(gl::ModelGL)
+    
+    @unpack β, ν,θ, ϕ₁, ϕ₂,ϕ, η,ψ,γ, B,S,r,nb,gameta,fin,sep = gl   # model parameters
+    @unpack cmin,tol_pol = gl                                       # numerical paras
+    @unpack b_grid,Ic,db = gl                                       # grids
+    @unpack pr,Pr = gl                                              # processes
+    @unpack cl,n_pol,y_pol,b_pol,c_pol,tol_dist,mpcs = gl           # solutions
+     
     # Update budget constraint
     τ   = (pr[1]*ν + r/(1+r)*B) / (1 - pr[1]);      # labor tax
     z   = [ν, -τ.*ones(S-1)...];                    # full transfer scheme (tau tilde in paper)
@@ -108,25 +112,13 @@ function EGM!(gl::ModelGL)
 
 end
 
-
-
-function find_cl(c, j, b1, b2, r, θ, z, fac, gameta)
-    # Find consumption for current assets b1 and next assets b2 
-
-    n = max(0, 1 - fac[j]*c.^gameta);
-    F = b1 - b2/(1+r) - c + θ[j]*n + z[j];
-    
-    return F
-end
-
+""" Computes the joint distribution of productivity and bond holdings. 
+Requires that optimal policies have already been solved (EGM!)
+"""
 function compute_distribution!(gl::ModelGL)
 
-    @unpack b_pol, b_grid,tol_dist,S,nb, JD,Pr,fin,pr,sep = gl
+    @unpack b_pol, b_grid,tol_dist,S,nb, JD,Pr,fin,pr,sep,ϕ = gl
     
-
-    # new transition matrix
-    Pr = [1-fin  fin.*pr'; 
-    sep .*ones(S-1)  (1-sep) .*Pr];
 
     # B) Find invariant distribution
     #----------------------------------
@@ -136,39 +128,125 @@ function compute_distribution!(gl::ModelGL)
     for s = 1:size(b_pol)[1]
     for b = 1:size(b_pol)[2]
         idx             = idxes[s,b]
-        idx_prime       = maximum(  [ idx+1,size(b_pol)[2] ]    )
-        db              = maximum(  [ b_grid[idx_prime] - b_grid[idx]  , eps() ] )
-        weights[s,b]    = ( b_pol[s,idx]  - b_grid[idx] ) / db;
+        idx_prime       = minimum(  [ idx+1,size(b_pol)[2] ]    )
+        #db              = maximum(  [ b_grid[idx_prime] - b_grid[idx]  , eps() ] )
+        db              =  b_grid[idx_prime] - b_grid[idx]  
+        weights[s,b]    = ( b_pol[s,b]  - b_grid[idx] ) / db;
     end
     end
- 
+
     # Iterate asset transition matrix starting from uniform distribution
     dif = 1;
     iter =1
+    JD = ones(S,nb) ./ (S*nb);
     while (dif > tol_dist) && iter < 1000
+        
         iter += 1
-        JDp = copy(JD)
+        JDp = zeros( size(JD) )
         for s = 1:S
         for b = 1:nb
             for si = 1:S
-                JDp[si, idxes[s, b]]     = (1 - weights[s, b]) * Pr[s, si] * JD[s, b]  
-                JDp[si, idxes[s, b] + 1] = weights[s, b]       * Pr[s, si] * JD[s, b]  
+                JDp[si, idxes[s, b]]     = (1 - weights[s, b]) * Pr[s, si] * JD[s, b]  + JDp[si, idxes[s, b]]
+                JDp[si, idxes[s, b] + 1] =      weights[s, b]  * Pr[s, si] * JD[s, b]  + JDp[si, idxes[s, b] + 1]
             end
         end
         end
 
         # check convergence
-        dif = norm( JDp - JD ) /( 1+norm(JD) )
-        println(dif)
+        dif = norm( JDp - JD ) /( 1+norm(JD) ) 
 
         # make sure that distribution integrates to 1
-        JD[:,:] = JDp / sum( JDp );
+        JD[:,:]  = JDp / sum( JDp );
+
     end
 
- 
+    return JD
 end
 
+"""
+Computes aggregate values and their distance from target.
+Requires that the joint distribution has already been solved (computer_distribution!) 
+"""
+function aggregate!(gl::ModelGL)
 
+    # Compute Steady-state aggregates
+    @unpack ν,β,ϕ,ψ,η  = gl
+    @unpack NE,νY,B_4Y,D1_4Y,D2_4Y  = gl
+    @unpack JD,b_grid,B,y_pol,n_pol  = gl
+    @unpack tol_cali,tol_mkt  = gl 
+
+    # C) Check market clearing and calibration
+    #-------------------------------------------------
+    # Bond market clearing, i refers to current iteration
+    Bi      = (sum(JD,dims=1) * b_grid)[1]
+    res_mkt = abs(B - Bi);
+
+    # Calibration statistics, i refers to current iteration
+    Yi    = sum(JD  .* y_pol  )                                     # GDP
+    NEi   = sum(  JD .* (n_pol.*(n_pol.>0) ) )  / sum(  JD .*(n_pol.>0)  )       # avg hours of employed
+    B_4Yi =  Bi / Yi / 4;                                                # debt ratio
+    Di    = - (   sum(JD,dims=1) *  ( b_grid .* (b_grid .< 0.) )  )[1]   
+    D_4Yi =  Di / Yi / 4;                                                # debt ratio
+    νYi    =  ν / Yi;                                                    # UI benefit ratio
+    res_cali = maximum(abs.([B_4Yi, D_4Yi, νYi, NEi] .- [B_4Y, D1_4Y, νY, NE]));
+
+    return Bi ,res_mkt ,Yi ,NEi,B_4Yi ,Di,D_4Yi,νYi,res_cali
+end
+
+"""
+calibrate the model to the target values. 
+Does not require any prior function calls.
+"""
+function calibrate!(gl::ModelGL)
+    
+    @unpack NE,νY,η,B_4Y,D1_4Y,D2_4Y  = gl
+    @unpack tol_cali,tol_mkt  = gl 
+    ite = 0
+    while true
+        ite +=1
+        initilize!(gl)
+        EGM!(gl)
+        gl.JD = compute_distribution!(gl)
+        Bi ,res_mkt ,Yi ,NEi,B_4Yi ,Di,D_4Yi,νYi,res_cali = aggregate!(gl) 
+        println( string(ite)*"  "*string(res_mkt)*"   "*string(res_cali) )
+        # Check convergence of both, update if necessary
+        if (res_cali < tol_cali) && (res_mkt < tol_mkt)
+            break
+        else
+            # discount factor
+            btemp   = -log(1- gl.β);
+            btemp   = btemp - .1*(Bi - B_4Y*4*Yi);
+            gl.β       = 1 - exp(-btemp);
+
+            # rest will be updated based on these
+            ϕ_d    = gl.ϕ * D1_4Y / D_4Yi;
+            ν_d    = νY * Yi;
+            ψ_d    = gl.ψ * ((1-NE) / (1-NEi))^η;
+
+            gl.ϕ   = gl.ϕ  + 0.1 * (ϕ_d   - gl.ϕ);
+            gl.ν   = gl.ν  + 1   * (ν_d   - gl.ν);
+            gl.ψ   = gl.ψ  + 1   * (ψ_d   - gl.ψ);
+
+            # Update aggregates
+            gl.B = gl.B + 0.1 * (Bi - gl.B); 
+        end
+    end
+
+
+end
+
+"""
+Helper function to find consumption at the constraint.
+Returns the residual the budget constraint
+"""
+function find_cl(c, j, b1, b2, r, θ, z, fac, gameta)
+    # Find consumption for current assets b1 and next assets b2 
+
+    n = max(0, 1 - fac[j]*c.^gameta);
+    F = b1 - b2/(1+r) - c + θ[j]*n + z[j];
+    
+    return F
+end
 
 
 
