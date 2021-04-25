@@ -1,9 +1,9 @@
 
 using Parameters
 using QuantEcon
- 
 
- 
+
+
 # -----------------------------------------------------------------------------
 # productivity process
 # -----------------------------------------------------------------------------
@@ -21,16 +21,16 @@ pr_              = stationary_distributions(mc_productivity)[1]
 # -----------------------------------------------------------------------------
 
 
-""" 
-single structure holding all parameters and solutions to the model 
+"""
+single structure holding all parameters and solutions to the model
 """
 @with_kw mutable struct ModelGL
 
     # Deep parameters
     γ::Float64           = 4.       # risk aversion
     frisch::Float64      = 1.       # avg Frisch elast.
-    r::Float64           = 2.5/400  # ss interest rate  
-    
+    r::Float64           = 2.5/400  # ss interest rate
+
 
     # Calibration targets
     NE::Float64         = 0.4       # avg hours of employed
@@ -58,8 +58,7 @@ single structure holding all parameters and solutions to the model
     tol_dist::Float64   = 1e-10; # tolerance lvl for distribution
     tol_mkt ::Float64   = 1e-6;  # tolerance lvl for market clearing
     tol_cali::Float64   = 1e-4;  # tolerance lvl for calibration
- 
-    
+
     # bond (asset) grid
     nb::Int64                   = 200; # number of grid points
     Ic                          = 100;
@@ -72,18 +71,18 @@ single structure holding all parameters and solutions to the model
     x::Array{Float64, 1}     = x
     Pr_::Array{Float64, 2}   = Pr_
     pr_::Array{Float64, 1}    = pr_
-    
+
     # Add unemployment
     θ       = [0; exp.(x)... ];
     S       = length(θ);
     fin     = 0.8820;        # job-finding probability
     sep     = 0.0573;        # separation probability
-    
+
     # new transition matrix
-    Pr = [1-fin  fin.*pr_'; 
+    Pr = [1-fin  fin.*pr_';
         sep .*ones(S-1)  (1-sep) .*Pr_];
 
-    pr::Array{Float64,1}      = zeros(S)    
+    pr::Array{Float64,1}      = zeros(S)
 
     # Policies
     cl::Array{Float64,1}                = ones(S);     # consumption at borrowing constraint
@@ -95,10 +94,26 @@ single structure holding all parameters and solutions to the model
 
     # Simulation
     JD::Array{Float64, 2}               = ones(S, nb) / (S+nb); # Joint compute_distribution
-    
 
- 
+    # SS Transition dynamics
+
+    # Numerical parameters
+    T::Int64               = 100                 # horizon, high enough for convergence to be complete
+    maxit_trans::Int64     = 400                 # maximum number of iterations
+    tol_mkt_trans::Float64 = 5e-6;               # tolerance for market clearing (lower than for ss computation)
+
+    # Updating weights for interest rate
+    speed::Float64 = 0.5
+    decay::Float64 = 0.3
+    weight = exp(-decay*(0:T-1))
+    weight = speed * weight / sum(weight)
+
+    # Transition objects
+    ib_pol_t::Array{Float64,3} = zeros(S, nb, T); # sequence of policy functions
+    wei_t::Array{Float64,3}    = zeros(S, nb, T); # sequence of weights on adjacent grid points
+    Bdem_t::Array{Float64,1}   = zeros(T);        # bond demand
+    Y_t::Array{Float64,1}      = zeros(T);        # GDP
+    D_t::Array{Float64,1}      = zeros(T);        # debt
+    D_4Y_t::Array{Float64,1}   = zeros(T);        # debt to GDP
+
 end
-
- 
- 
