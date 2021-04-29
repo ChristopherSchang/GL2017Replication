@@ -61,11 +61,11 @@ single structure holding all parameters and solutions to the model
 
     # bond (asset) grid
     nb::Int64                   = 200; # number of grid points
-    Ic                          = 100;
-    bmin                        = -2;   # lower bound
-    bmax                        = 50;   # upper bound
+    Ic::Int64                   = 100;
+    bmin::Float64               = -2.;   # lower bound
+    bmax::Float64               = 50.;   # upper bound
     b_grid::Array{Float64,1}    = bmin .+ ((1:nb)/nb).^2 .* (bmax - bmin); # denser for low values
-    db                          = 0.01; # step size for MPC
+    db::Float64                 = 0.01; # step size for MPC
 
     # productivity shock process
     x::Array{Float64, 1}     = x
@@ -73,16 +73,16 @@ single structure holding all parameters and solutions to the model
     pr_::Array{Float64, 1}    = pr_
 
     # Add unemployment
-    θ       = [0; exp.(x)... ];
-    S       = length(θ);
-    fin     = 0.8820;        # job-finding probability
-    sep     = 0.0573;        # separation probability
+    θ::Array{Float64, 1}= [0; exp.(x)... ];
+    S::Int64            = length(θ);
+    fin::Float64        = 0.8820;        # job-finding probability
+    sep::Float64        = 0.0573;        # separation probability
 
     # new transition matrix
-    Pr = [1-fin  fin.*pr_';
-        sep .*ones(S-1)  (1-sep) .*Pr_];
+    Pr::Array{Float64, 2}   = [1-fin              fin.*pr_';
+                               sep .*ones(S-1)  (1-sep) .*Pr_];
 
-    pr::Array{Float64,1}      = zeros(S)
+    pr::Array{Float64,1}    = zeros(S)
 
     # Policies
     cl::Array{Float64,1}                = ones(S);     # consumption at borrowing constraint
@@ -105,8 +105,8 @@ single structure holding all parameters and solutions to the model
     # Updating weights for interest rate
     speed::Float64 = 0.5
     decay::Float64 = 0.3
-    weight = exp(-decay*(0:T-1))
-    weight = speed * weight / sum(weight)
+    weight_::Array{Float64,1} = exp.(-decay*(0:T-1))
+    weight::Array{Float64,1}  = speed * weight_ / sum(weight_)
 
     # Transition objects
     ib_pol_t::Array{Float64,3} = zeros(S, nb, T); # sequence of policy functions
