@@ -5,35 +5,34 @@ using Roots
 using Interpolations
 using LinearAlgebra
 
+
+function compute_steady_state!(gl::ModelGL) 
+    initilize!(gl)
+    EGM!(gl)
+    compute_distribution!(gl)
+    aggregate!(gl)
+end
+
+
 """
-Initializes some values for the ModelGL struct.
+Adds borrowing constraint as gridpint
 """
 function initilize!(gl::ModelGL)
-    @unpack fin,sep,tol_dist,b_grid, ϕ,S = gl    # model parameters
-    @unpack pr_,Pr = gl                         # processes
-
-
-    # find new invariate distribution
-    gl.pr  = [0, pr_...];
-    dif = 1;
-    while dif > tol_dist
-        pri = (gl.pr'*Pr)';
-        dif = maximum( abs.(pri .- gl.pr) );
-        gl.pr  = pri;
-    end
-
+ 
     # Ensure that constraint is on the grid
     gl.b_grid = gl.bmin .+ ((1:gl.nb)/gl.nb).^2 .* (gl.bmax - gl.bmin); # denser for low values
     i = maximum(  [  searchsortedlast(gl.b_grid, -gl.ϕ) ,  1] )
     gl.b_grid[i] =  -gl.ϕ
 end
 
+
 """
 Calculates optimal policy functions with the EGM algorithm.
 """
 function EGM!(gl::ModelGL)
-
-    @unpack β, ν,θ, ϕ₁, ϕ₂,ϕ, η,ψ,γ, B,S,r,nb,gameta,fin,sep = gl   # model parameters
+    
+    @unpack r,ϕ  = gl    
+    @unpack β, ν,θ, η,ψ,γ, B,S,nb,gameta,fin,sep = gl               # model parameters
     @unpack cmin,tol_pol = gl                                       # numerical paras
     @unpack b_grid,Ic,db = gl                                       # grids
     @unpack pr,Pr = gl                                              # processes
@@ -156,6 +155,8 @@ function compute_distribution!(gl::ModelGL)
 
     end
 
+    gl.JD = copy(JD)
+
     return JD
 end
 
@@ -163,7 +164,7 @@ end
 Computes aggregate values and their distance from target.
 Requires that the joint distribution has already been solved (computer_distribution!)
 """
-function aggregate!(gl::ModelGL)
+function aggregate!(gl::ModelGL;terminal::Bool = false)
 
     # Compute Steady-state aggregates
     @unpack ν,β,ϕ,ψ,η  = gl
@@ -184,7 +185,11 @@ function aggregate!(gl::ModelGL)
     Di    = - (   sum(JD,dims=1) *  ( b_grid .* (b_grid .< 0.) )  )[1]
     D_4Yi =  Di / Yi / 4;                                                # debt ratio
     νYi    =  ν / Yi;                                                    # UI benefit ratio
-    res_cali = maximum(abs.([B_4Yi, D_4Yi, νYi, NEi] .- [B_4Y, D1_4Y, νY, NE]));
+    if terminal == false
+        res_cali = maximum(abs.([B_4Yi, D_4Yi, νYi, NEi] .- [B_4Y, D1_4Y, νY, NE]));
+    else
+        res_cali = maximum(abs.([  D_4Yi ] .- [  D2_4Y ]));
+    end
 
     return Bi ,res_mkt ,Yi ,NEi,B_4Yi ,Di,D_4Yi,νYi,res_cali
 end
@@ -195,14 +200,14 @@ Does not require any prior function calls.
 """
 function calibrate!(gl::ModelGL)
 
-    @unpack NE,νY,η,B_4Y,D1_4Y,D2_4Y  = gl
+    @unpack NE,νY,η,B_4Y,D1_4Y  = gl
     @unpack tol_cali,tol_mkt  = gl
     ite = 0
     while true
         ite +=1
         initilize!(gl)
         EGM!(gl)
-        gl.JD = compute_distribution!(gl)
+        compute_distribution!(gl)
         Bi ,res_mkt ,Yi ,NEi,B_4Yi ,Di,D_4Yi,νYi,res_cali = aggregate!(gl)
         println( string(ite)*"  "*string(res_mkt)*"   "*string(res_cali) )
         # Check convergence of both, update if necessary
@@ -227,6 +232,41 @@ function calibrate!(gl::ModelGL)
             gl.B = gl.B + 0.1 * (Bi - gl.B);
         end
     end
+end
+
+
+"""
+calibrate the model to the terminal target value (only borrowing constraint)
+Requires a calibrated initital steady-state object.
+Returns a new terminal steady-state object.
+"""
+function calibrate_terminal(gl_initial::ModelGL)
+    
+    gl = deepcopy(gl_initial)   # terminal steadystate
+
+    @unpack D2_4Y  = gl
+    @unpack tol_cali,tol_mkt  = gl
+    ite = 0
+    while true
+        ite +=1
+        initilize!(gl)
+        EGM!(gl)
+        compute_distribution!(gl)
+        Bi ,res_mkt ,Yi ,NEi,B_4Yi ,Di,D_4Yi,νYi,res_cali = aggregate!(gl,terminal = true)
+        println( string(ite)*"  "*string(res_mkt)*"   "*string(res_cali) )
+        # Check convergence of both, update if necessary
+        if (res_cali < tol_cali) && (res_mkt < tol_mkt)
+            break
+        else 
+            gl.r = gl.r - 1/400*(Bi-gl.B)
+            
+            ϕ_d    = gl.ϕ * D2_4Y / D_4Yi;  
+            gl.ϕ   = gl.ϕ  + 0.1 * (ϕ_d   - gl.ϕ); 
+ 
+        end
+    end
+
+    return gl
 end
 
 

@@ -19,7 +19,29 @@ pr_              = stationary_distributions(mc_productivity)[1]
 
 # !!! cannot replicate exact values !!!
 # -----------------------------------------------------------------------------
+θ               = [0; exp.(x)... ];
+S               = length(θ);
+fin             = 0.8820;        # job-finding probability
+sep             = 0.0573;        # separation probability
 
+# new transition matrix
+Pr              = [1-fin              fin.*pr_';
+                           sep .*ones(S-1)  (1-sep) .*Pr_];
+    
+function initt(Pr,pr_)
+    tol_dist    = 1e-10;
+    # find new invariate distribution
+    pr  = [0, pr_...];
+    dif = 1;
+    while dif > tol_dist 
+        pri = (pr'*Pr)';
+        dif = maximum( abs.(pri .-  pr) );
+        pr  = pri;
+    end
+    return pr
+end
+
+pr = initt(Pr,pr_)
 
 """
 single structure holding all parameters and solutions to the model
@@ -82,7 +104,7 @@ single structure holding all parameters and solutions to the model
     Pr::Array{Float64, 2}   = [1-fin              fin.*pr_';
                                sep .*ones(S-1)  (1-sep) .*Pr_];
 
-    pr::Array{Float64,1}    = zeros(S)
+    pr::Array{Float64,1}    = pr
 
     # Policies
     cl::Array{Float64,1}                = ones(S);     # consumption at borrowing constraint

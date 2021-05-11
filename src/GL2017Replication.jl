@@ -2,7 +2,9 @@ module GL2017Replication
 
 
 export hello, domath
-export initilize!,aggregate!,calibrate!,EGM!, compute_distribution!,EGM_tss!,aggregate_tss!,compute_tss!
+export compute_steady_state!,initilize!,aggregate! ,EGM!, compute_distribution!
+export calibrate!, calibrate_terminal
+export EGM_tss!,aggregate_tss!,compute_tss!
 export ModelGL
 
 # Import scripts

@@ -4,17 +4,29 @@ using .GL2017Replication
 
 # -----------------------------------------------------------------------------
 
-# Load model structure
+# 1) Load model structure
 gl = ModelGL()
 
-# solve model with given parameters
+# 2) solve model with default parameters
 initilize!(gl)
-EGM!(gl)
-gl.JD = compute_distribution!(gl)
+EGM!(gl )
+compute_distribution!(gl)
 aggregate!(gl)
 
-# calibrate to target values for initial ss
+# 3) does the same as 2) in one step
+compute_steady_state!(gl)
+
+# 4) calibrate to target values for initial ss  -- requires 1)
 calibrate!(gl)
+
+# 5) calibrate to target values for terminal ss -- requires 3) or 4)
+gl_tss = calibrate_terminal(gl)
+
+ 
+  
+
+
+
 
 
 # NOT WORKING YET: 
@@ -61,3 +73,5 @@ bond_distribution = dropdims( pr'*JD[:,b_grid .>= -ϕ] ,dims=1)
 plot(b_grid[b_grid .>= -ϕ]/(4*Y1),  bond_distribution    )
 title!("bond distribution")
 xaxis!([-ϕ,12.5])
+
+ 
