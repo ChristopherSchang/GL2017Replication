@@ -13,18 +13,20 @@ EGM!(gl)
 gl.JD = compute_distribution!(gl)
 aggregate!(gl)
 
-# calibrate to target values
+# calibrate to target values for initial ss
 calibrate!(gl)
-# save("base_cal.jld","gl",gl)  # save output to avoid re-calibrating again (∼15min)
 
-# re-calibrate (only phi2) to target value for terminal steady state
-# NOT WORKING: EGM fails after ϕ is updated. Interpolation returns error meesage "knot-vectors must be sorted in increasing order"
-gl_tss = load("base_cal.jld")
-gl_tss = gl_tss["gl"]
+
+# NOT WORKING YET: 
+
+# re-calibrate (only phi2) to target for terminal ss
+# EGM fails after ϕ is updated. Interpolation returns error meesage "knot-vectors must be sorted in increasing order"
+gl_tss = gl
 gl_tss.ϕ = gl_tss.ϕ₂
 compute_tss!(gl_tss)
 
-
+# compute transition dynamics
+gl_trans = transition(gl,gl_tss)
 
 
 

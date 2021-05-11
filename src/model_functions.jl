@@ -175,7 +175,7 @@ function aggregate!(gl::ModelGL)
     #-------------------------------------------------
     # Bond market clearing, i refers to current iteration
     Bi      = (sum(JD,dims=1) * b_grid)[1]
-    res_mkt = abs(B - Bi);
+    res_mkt = abs(B - Bi)
 
     # Calibration statistics, i refers to current iteration
     Yi    = sum(JD  .* y_pol  )                                     # GDP
@@ -365,15 +365,16 @@ end
 
 
 """
-compute transition path (just started).
+compute transition path (preliminary).
 """
 
-function transition!(gl::ModelGL,gl_tss::ModelGL)
+function transition(gl::ModelGL,gl_tss::ModelGL)
 
-    @unpack  ϕ,r,T = gl
-    @unpack  ϕ2,r2, c_pol2 = gl_tss
+    @unpack ϕ,r,T,JD = gl             # initial ss 
+    @unpack ϕ2,r2, c_pol2 = gl_tss    # terminal ss
+    @unpack pr,Pr = gl                # processes
 
-    # Credit crunch
+    # Define credit crunch parameters
     t_shock = 6                     # quarters to get to new constraint
     dϕ      = (ϕ - ϕ2)/t_shock      # step size
     ϕ_t     = max(ϕ2,ϕ-dϕ*(0:T))    # full path
@@ -381,10 +382,132 @@ function transition!(gl::ModelGL,gl_tss::ModelGL)
     # Initial guess
     r_t = r2*ones(T,1)
 
-    # 1) Iterate HH problem backwards
-    # 2) Iterate distribution forward
-    # 3) Check convergence
+    for it = 1:maxit_trans
+    
+        # 1) Iterate HH problem backwards
+        
+        c_pol = c_pol2   # start from terminal ss
 
+        for t = T:-1:1
+            # current value
+            r = r_t[t]
+            ϕ = ϕ_t[t+1]
+
+            # update budegt constraint
+            τ   = (pr[1]*ν + r/(1+r)*B) / (1 - pr[1]);      # labor tax
+            z   = [ν, -τ.*ones(S-1)...];                    # full transfer scheme (tau tilde in paper)
+        
+            # Find consumption at the lower bound of the state space
+            fac = (ψ ./ θ) .^ (1/η);
+            for s = 1:S
+                cl[s] =   find_zero( x -> find_cl(x,s, -ϕ_t[t], -ϕ_t[t+1], r, θ, z, fac, gameta)
+                                        , (cmin, 100), Bisection()  )
+            end
+
+            # expected marginal utility tomorrow
+            ui = Pr *  c_pol.^(-γ) ;
+            ui = ui[:, b_grid .>= -ϕ];
+
+
+            # previous consumption and savings policy
+            for s=1:S
+                # unconstrained
+                c = ((1+r) * β * ui[s,:]) .^ (-1/γ);                   # Euler
+                n =   (1 .- fac[s]*c.^gameta )                         # labor supply
+                n = [ n[i] < 0. ? 0. : n[i] for i = 1:length(n)]
+                b = b_grid[b_grid .>= -ϕ] / (1+r) .+ c .- θ[s] .*n .- z[s]; # budget
+        
+                # constrained
+                if b[1] > -ϕ_t[t]
+                    c_c = range(cl[s], stop=c[1], length=Ic);
+                    n_c =   (1 .- fac[s]*c_c.^gameta )                         # labor supply
+                    n_c = [ n_c[i] < 0. ? 0. : n_c[i] for i = 1:length(n_c)]
+                    b_c = -ϕ/(1+r) .+ c_c .- θ[s] .*n_c .- z[s]; # budget
+                    b   = [b_c[1:Ic-1]..., b...];
+                    c   = [c_c[1:Ic-1]..., c...];
+                end
+
+                # update policies
+                itp = extrapolate(    interpolate((b,),c, Gridded(Linear())), Interpolations.Flat() )
+                c_pol[s,:] = itp(  b_grid   )
+                c_pol[s, :] = max(c_pol[s, :], cmin);
+
+                npp   = 1 .- fac[s] .*c_pol[s,:] .^gameta
+                npp[npp .<= 0.] .= 0.
+                n_pol[s,:] .= npp
+                y_pol[s,:] = θ[s] .* n_pol[s,:];
+                bpp        = (1+r) * (b_grid .+ y_pol[s,:] .- c_pol[s,:] .+ z[s])
+                bpp[bpp .<= -ϕ] .= -ϕ
+                b_pol[s,:] .= bpp
+
+                # save policies
+                c_pol_t[s, :, t] = c_pol[s, :];
+                n_pol_t[s, :, t] = n_pol[s, :];
+                y_pol_t[s, :, t] = y_pol[s, :];
+            end
+
+            # save weights needed to iterate distribution
+            idxes       = [searchsortedlast(b_grid,b_pol[s, b]) for s = 1:size(b_pol)[1], b = 1:size(b_pol)[2] ]
+            weights     = zeros(size(b_pol))
+            for s = 1:size(b_pol)[1]
+            for b = 1:size(b_pol)[2]
+                idx             = idxes[s,b]
+                idx_prime       = minimum(  [ idx+1,size(b_pol)[2] ]    )
+                db              =  b_grid[idx_prime] - b_grid[idx]
+                weights[s,b]    = ( b_pol[s,b]  - b_grid[idx] ) / db;
+            end
+            end
+            ib_pol_t[:,:,t] = idxes
+            wei_t[:,:,t]    = weights   
+        end
+
+        # 2) Iterate distribution forward
+
+        JD = JD;  # start from initial ss
+        for t = 1:T
+
+            # calculate bond market clearing
+            Bdem_t[t] = (sum(JD,dims=1) * b_grid)[1]
+
+            # calculate other aggregates
+            Y_t[t]    = sum(JD  .* y_pol_t[:,:,t])                         # GDP
+            D_t[t]    = -(sum(JD,dims=1) * (b_grid .* (b_grid .< 0.)))[1]  # Debt
+            D_4Y_t[t] =  D_t[t] / Y_t[t] / 4                               # Debt2GDP annual           
+
+            # iterate on distribution
+            JDp = zeros( size(JD) )
+            for s = 1:S
+            for b = 1:nb
+                for si = 1:S
+                    JDp[si, ib_pol_t[s, b, t]]     = (1 - wei_t[s, b, t]) * Pr[s, si] * JD[s, b]  + JDp[si, ib_pol_t[s, b, t]]
+                    JDp[si, ib_pol_t[s, b, t] + 1] =      wei_t[s, b, t]  * Pr[s, si] * JD[s, b]  + JDp[si, ib_pol_t[s, b, t] + 1]
+                end
+            end
+            end
+
+            # make sure that distribution integrates to 1
+            JD[:,:]  = JDp / sum( JDp )
+
+        end
+        
+        # 3) Check convergence
+        
+        # Market clearing
+        BM_t = Bdem_t - B
+
+        # Metric of deviation
+        res_BM = sqrt(BM_t * BM_t' / T)
+
+        # Report progress
+        println( string(it)*"  "*string(res_BM))
+
+        if res_BM < tol_mkt
+            break
+        end
+
+        # Update 
+        r_t = r_t - (weight.*BM_t)'
+    end
 
 end
 
