@@ -1,7 +1,7 @@
 
 using Parameters
 using QuantEcon
-
+using DelimitedFiles
 
 
 # -----------------------------------------------------------------------------
@@ -17,16 +17,22 @@ x               = mc_productivity.state_values
 Pr_             = mc_productivity.p
 pr_              = stationary_distributions(mc_productivity)[1]
 
+#income process from MATLAB code
+#pr = readdlm(".\\replication-codes-for-Credit-Crises\\ppr.csv",',',Float64)[:]
+#Pr = readdlm(".\\replication-codes-for-Credit-Crises\\Pr.csv",',',Float64) 
+#x  = readdlm(".\\replication-codes-for-Credit-Crises\\x.csv",',',Float64)[:]
+
+
 # !!! cannot replicate exact values !!!
 # -----------------------------------------------------------------------------
 θ               = [0; exp.(x)... ];
 S               = length(θ);
 fin             = 0.8820;        # job-finding probability
 sep             = 0.0573;        # separation probability
-
+ 
 # new transition matrix
 Pr              = [1-fin              fin.*pr_';
-                           sep .*ones(S-1)  (1-sep) .*Pr_];
+                    sep .*ones(S-1)  (1-sep) .*Pr_];
     
 function initt(Pr,pr_)
     tol_dist    = 1e-10;
@@ -42,6 +48,8 @@ function initt(Pr,pr_)
 end
 
 pr = initt(Pr,pr_)
+ 
+
 
 """
 single structure holding all parameters and solutions to the model
@@ -91,8 +99,8 @@ single structure holding all parameters and solutions to the model
 
     # productivity shock process
     x::Array{Float64, 1}     = x
-    Pr_::Array{Float64, 2}   = Pr_
-    pr_::Array{Float64, 1}   = pr_
+    #Pr_::Array{Float64, 2}   = Pr_
+    #pr_::Array{Float64, 1}   = pr_
 
     # Add unemployment
     θ::Array{Float64, 1}= [0; exp.(x)... ];
@@ -101,8 +109,7 @@ single structure holding all parameters and solutions to the model
     sep::Float64        = 0.0573;        # separation probability
 
     # new transition matrix
-    Pr::Array{Float64, 2}   = [1-fin              fin.*pr_';
-                               sep .*ones(S-1)  (1-sep) .*Pr_];
+    Pr::Array{Float64, 2}   = Pr
 
     pr::Array{Float64,1}    = pr
 

@@ -84,7 +84,7 @@ yaxis!([0,0.004])
  plot(0:Tp, ϕ_t[1:Tp+1]/(4*Y1))         # borrowing limit
  plot(0:Tp, D_4Y_t[1:Tp+1])             # debt2gdp ratio
  plot(0:Tp, [gl.r;r_t[1:Tp]]*400)       # annualized interest rate
- plot(0:Tp, [0, 100*(Y_t[1:Tp]/Y1-1))   # output deviation from steady state
+ plot(0:Tp, [0, 100*(Y_t[1:Tp]/Y1-1)])   # output deviation from steady state
 
 
 
