@@ -22,25 +22,14 @@ calibrate!(gl)
 # 5) calibrate to target values for terminal ss -- requires 3) or 4)
 gl_tss = calibrate_terminal(gl)
 
- 
-  
+# save("gl.jld","gl",gl,"gl_tss",gl_tss)
+# gl     = load("gl.jld")["gl"]
+# gl_tss = load("gl.jld")["gl_tss"]
 
+# 6) compute transition dynamics -- requires 4) and 5)
 
-
-
-
-# NOT WORKING YET: 
-
-# re-calibrate (only phi2) to target for terminal ss
-# EGM fails after ϕ is updated. Interpolation returns error meesage "knot-vectors must be sorted in increasing order"
-gl_tss = gl
-gl_tss.ϕ = gl_tss.ϕ₂
-compute_tss!(gl_tss)
-
-# compute transition dynamics
-gl_trans = transition(gl,gl_tss)
-
-
+Tgl = TransGL()
+gl_trans = transition!(gl,gl_tss,Tgl)
 
 
 # -----------------------------------------------------------------------------
@@ -48,30 +37,68 @@ gl_trans = transition(gl,gl_tss)
 
 using Plots
 plotly(linewidth = 2.)
-using Parameters
-@unpack b_grid,c_pol,n_pol,b_pol,JD, ϕ,pr = gl
+using Parameters, Statistics
 
-# From paper:   Figure I
+@unpack b_grid,pr = gl                  # objects that are identical across both steady states
+@unpack r_t,ϕ_t,Y_t,D_4Y_t = Tgl        # transition objects    
+
+# Figure I (from paper)
 
 Y1 = 0.4174 # !!! made up
-plot(b_grid[b_grid .>= -ϕ]/(4*Y1), c_pol[2,b_grid .>= -ϕ],label = "θ = 2")
-plot!(b_grid[b_grid .>= -ϕ]/(4*Y1), c_pol[8,b_grid .>= -ϕ],
+plot( b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.c_pol[2,b_grid .>= -gl.ϕ],label = "θ = 2")
+plot!(b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.c_pol[8,b_grid .>= -gl.ϕ],
         linestyle = :dash,label = "θ = 8")
 title!("consumption")
-xaxis!([-ϕ,12.5])
+xaxis!([-gl.ϕ,12.5])
 
-plot(b_grid[b_grid .>= -ϕ]/(4*Y1), n_pol[2,b_grid .>= -ϕ],label =  "θ = 2")
-plot!(b_grid[b_grid .>= -ϕ]/(4*Y1), n_pol[8,b_grid .>= -ϕ],
+plot( b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.n_pol[2,gl.b_grid .>= -gl.ϕ],label =  "θ = 2")
+plot!(b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.n_pol[8,gl.b_grid .>= -gl.ϕ],
         linestyle = :dash,label = "θ = 8")
 title!("labor supply")
-xaxis!([-ϕ,12.5])
+xaxis!([-gl.ϕ,12.5])
 
 
-# From paper:   Figure IV
-using Statistics
-bond_distribution = dropdims( pr'*JD[:,b_grid .>= -ϕ] ,dims=1)
-plot(b_grid[b_grid .>= -ϕ]/(4*Y1),  bond_distribution    )
+# Figure IV (from paper)
+
+b_acc1 =  ((pr'*gl.b_pol[:,b_grid     .>= -gl.ϕ])'     .- b_grid[b_grid .>= -gl.ϕ])/(4*Y1)
+b_acc2 =  ((pr'*gl_tss.b_pol[:,b_grid .>= -gl_tss.ϕ])' .- b_grid[b_grid .>= -gl_tss.ϕ])/(4*Y1)
+plot( b_grid[b_grid .>= -gl.ϕ]/(4*Y1), b_acc1)
+plot!(b_grid[b_grid .>= -gl_tss.ϕ]/(4*Y1), b_acc2,
+        linestyle = :dash)
+title!("bond accumulation policy")
+xaxis!([-2,14],-2:2:14)
+yaxis!([-0.4,0.6],-0.4:0.2:0.6)
+
+bond_distribution1 = dropdims( pr'    *gl.JD[:,b_grid .>= -gl.ϕ]     ,dims=1)
+bond_distribution2 = dropdims( pr'*gl_tss.JD[:,b_grid .>= -gl_tss.ϕ] ,dims=1)
+plot( b_grid[b_grid .>= -gl.ϕ]/(4*Y1),  bond_distribution1)
+plot!(b_grid[b_grid .>= -gl_tss.ϕ]/(4*Y1),  bond_distribution2,
+        linestyle = :dash)
 title!("bond distribution")
-xaxis!([-ϕ,12.5])
+xaxis!([-2,14],-2:2:14)
+yaxis!([0,0.004])
 
- 
+ # Figure III (from paper)
+ Tp = 24    # number of periods plotted
+
+ plot(0:Tp, ϕ_t[1:Tp+1]/(4*Y1))         # borrowing limit
+ plot(0:Tp, D_4Y_t[1:Tp+1])             # debt2gdp ratio
+ plot(0:Tp, [gl.r;r_t[1:Tp]]*400)       # annualized interest rate
+ plot(0:Tp, [0, 100*(Y_t[1:Tp]/Y1-1))   # output deviation from steady state
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

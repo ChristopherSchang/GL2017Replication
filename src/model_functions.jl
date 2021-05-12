@@ -15,7 +15,7 @@ end
 
 
 """
-Adds borrowing constraint as gridpint
+Adds borrowing constraint as gridpoint
 """
 function initilize!(gl::ModelGL)
  
@@ -243,6 +243,7 @@ Returns a new terminal steady-state object.
 function calibrate_terminal(gl_initial::ModelGL)
     
     gl = deepcopy(gl_initial)   # terminal steadystate
+    gl.ϕ = gl.ϕ₂                # update initial guess
 
     @unpack D2_4Y  = gl
     @unpack tol_cali,tol_mkt  = gl
@@ -271,284 +272,170 @@ end
 
 
 """
-Calculates optimal policy functions with the EGM algorithm for terminal ss computation.
-Simplified version of EGM!, takes initial guess for PF from input.
-"""
-function EGM_tss!(gl::ModelGL)
-
-    @unpack β, ν,θ, ϕ₁, ϕ₂,ϕ, η,ψ,γ, B,S,r,nb,gameta,fin,sep = gl   # model parameters
-    @unpack cmin,tol_pol = gl                                       # numerical paras
-    @unpack b_grid,Ic,db = gl                                       # grids
-    @unpack pr,Pr = gl                                              # processes
-    @unpack cl,n_pol,y_pol,b_pol,c_pol,tol_dist,mpcs = gl           # solutions
-
-    # Update budget constraint
-    τ   = (pr[1]*ν + r/(1+r)*B) / (1 - pr[1]);      # labor tax
-    z   = [ν, -τ.*ones(S-1)...];                    # full transfer scheme (tau tilde in paper)
-
-    # Find consumption at the lower bound of the state space
-    fac = (ψ ./ θ) .^ (1/η);
-    for s = 1:S
-        cl[s] =   find_zero( x -> find_cl(x,s, -ϕ, -ϕ, r, θ, z, fac, gameta)
-                                , (cmin, 100), Bisection()  )
-    end
-
-    # A) Solve for consumption policy
-    #----------------------------------
-    # Initial guess for policy function
-    c_poli = copy(c_pol)
-
-    # policy Convergence
-    dif = 1;
-    while dif > tol_pol
-      # expected marginal utility tomorrow
-      ui = Pr *  c_pol.^(-γ) ;
-      ui = ui[:, b_grid .>= -ϕ];
-
-      for s=1:S
-        # unconstrained
-        c = ((1+r) * β * ui[s,:]) .^ (-1/γ);                   # Euler
-        n =   (1 .- fac[s]*c.^gameta )                         # labor supply
-        n = [ n[i] < 0. ? 0. : n[i] for i = 1:length(n)]
-        b = b_grid[b_grid .>= -ϕ] / (1+r) .+ c .- θ[s] .*n .- z[s]; # budget
-
-        # constrained
-        if b[1] > -ϕ
-            c_c = range(cl[s], stop=c[1], length=Ic);
-            n_c =   (1 .- fac[s]*c_c.^gameta )                         # labor supply
-            n_c = [ n_c[i] < 0. ? 0. : n_c[i] for i = 1:length(n_c)]
-            b_c = -ϕ/(1+r) .+ c_c .- θ[s] .*n_c .- z[s]; # budget
-            b   = [b_c[1:Ic-1]..., b...];
-            c   = [c_c[1:Ic-1]..., c...];
-        end
-        itp = extrapolate(    interpolate((b,),c, Gridded(Linear())), Interpolations.Flat() )
-        c_poli[s,:] = itp(  b_grid   )
-        # interp1(b, c, b_grid, 'linear', 'extrap');
-      end
-
-      # check convergence
-      c_poli[c_poli .<= cmin] .= cmin
-      dif    = norm(c_poli - c_pol)/(1+norm(c_pol) );
-
-      # update
-      c_pol[:,:] = copy(c_poli);
-    end
-
-    # Save other policy functions and MPCs
-    for s = 1:S
-      npp   = 1 .- fac[s] .*c_pol[s,:] .^gameta
-      npp[npp .<= 0.] .= 0.
-      n_pol[s,:] .= npp
-      y_pol[s,:] = θ[s] .* n_pol[s,:];
-      bpp        = (1+r) * (b_grid .+ y_pol[s,:] .- c_pol[s,:] .+ z[s])
-      bpp[bpp .<= -ϕ] .= -ϕ
-      b_pol[s,:] .= bpp
-      itp = extrapolate(    interpolate((b_grid,),c_pol[s,:], Gridded(Linear())), Interpolations.Flat() )
-      mpcs[s,:]  = (    itp( b_grid .+ db )  .- c_pol[s,:]  ) ./ db;
-      # (interp1(b_grid, c_pol(s,:), b_grid + db, 'linear', 'extrap') - c_pol(s,:)) / db;
-    end
-end
-
-"""
-Computes aggregate debt and its distance from target for terminal ss calibration.
-Requires that the joint distribution has already been solved (computer_distribution!)
-"""
-function aggregate_tss!(gl::ModelGL)
-
-    # Compute Steady-state aggregates
-    @unpack ν,β,ϕ,ψ,η  = gl
-    @unpack NE,νY,B_4Y,D1_4Y,D2_4Y  = gl
-    @unpack JD,b_grid,B,y_pol,n_pol  = gl
-    @unpack tol_cali,tol_mkt  = gl
-
-    # C) Check market clearing and calibration
-    #-------------------------------------------------
-    # Bond market clearing, i refers to current iteration
-    Bi      = (sum(JD,dims=1) * b_grid)[1]
-    res_mkt = abs(B - Bi);
-
-    # Calibration statistics, i refers to current iteration
-    Yi    = sum(JD  .* y_pol  )                                     # GDP
-    Di    = - (   sum(JD,dims=1) *  ( b_grid .* (b_grid .< 0.) )  )[1]
-    D_4Yi =  Di / Yi / 4;                                                # debt ratio
-    res_cali = maximum(abs.(D_4Yi - D2_4Y));
-
-    return Bi ,res_mkt ,Yi ,Di,D_4Yi,res_cali
-end
-
-"""
-compute terminal steady state by re-calibrating borrowing limit.
-"""
-function compute_tss!(gl::ModelGL)
-
-    @unpack NE,νY,η,B_4Y,D1_4Y,D2_4Y  = gl
-    @unpack tol_cali,tol_mkt  = gl
-    ite = 0
-    while true
-        ite +=1
-        EGM_tss!(gl)
-        gl.JD = compute_distribution!(gl)
-        Bi ,res_mkt ,Yi ,Di,D_4Yi,res_cali = aggregate_tss!(gl)
-        println( string(ite)*"  "*string(res_mkt)*"   "*string(res_cali) )
-        # Check convergence of both, update if necessary
-        if (res_cali < tol_cali) && (res_mkt < tol_mkt)
-            break
-        else
-
-            # Update borrowing limit and interest rate
-            ϕ_d    = gl.ϕ * D2_4Y / D_4Yi
-            gl.ϕ   = gl.ϕ  + 0.1 * (ϕ_d   - gl.ϕ)
-            gl.r   = gl.r - 1/400*(Bi - gl.B)
-        end
-    end
-end
-
-
-"""
-compute transition path (preliminary).
+compute transition path.
 """
 
-function transition(gl::ModelGL,gl_tss::ModelGL)
+function transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
+    @unpack T, maxit_trans, tol_mkt_trans, weight = Tgl
+    @unpack Pr,B,nb = gl        
 
-    @unpack ϕ,r,T,JD = gl             # initial ss 
-    @unpack ϕ2,r2, c_pol2 = gl_tss    # terminal ss
-    @unpack pr,Pr = gl                # processes
+    gl_t = deepcopy(gl)  # define new object for each time period
 
     # Define credit crunch parameters
-    t_shock = 6                     # quarters to get to new constraint
-    dϕ      = (ϕ - ϕ2)/t_shock      # step size
-    ϕ_t     = max(ϕ2,ϕ-dϕ*(0:T))    # full path
+    t_shock = 6                           # quarters to get to new constraint
+    dϕ      = (gl.ϕ - gl_tss.ϕ)/t_shock   # step size
+    Tgl.ϕ_t  = [max(gl_tss.ϕ,gl.ϕ .- dϕ*t) for t in 0:T] # full path
 
-    # Initial guess
-    r_t = r2*ones(T,1)
+    # Initial guess of r_t
+    Tgl.r_t = gl_tss.r .* ones(T)  # interest rate in terminal ss
 
     for it = 1:maxit_trans
     
-        # 1) Iterate HH problem backwards
-        
-        c_pol = c_pol2   # start from terminal ss
-
+        # 1) Iterate HH problem backwards      
+        gl_t.c_pol = gl_tss.c_pol   # start from terminal ss
         for t = T:-1:1
-            # current value
-            r = r_t[t]
-            ϕ = ϕ_t[t+1]
-
-            # update budegt constraint
-            τ   = (pr[1]*ν + r/(1+r)*B) / (1 - pr[1]);      # labor tax
-            z   = [ν, -τ.*ones(S-1)...];                    # full transfer scheme (tau tilde in paper)
-        
-            # Find consumption at the lower bound of the state space
-            fac = (ψ ./ θ) .^ (1/η);
-            for s = 1:S
-                cl[s] =   find_zero( x -> find_cl(x,s, -ϕ_t[t], -ϕ_t[t+1], r, θ, z, fac, gameta)
-                                        , (cmin, 100), Bisection()  )
-            end
-
-            # expected marginal utility tomorrow
-            ui = Pr *  c_pol.^(-γ) ;
-            ui = ui[:, b_grid .>= -ϕ];
-
-
-            # previous consumption and savings policy
-            for s=1:S
-                # unconstrained
-                c = ((1+r) * β * ui[s,:]) .^ (-1/γ);                   # Euler
-                n =   (1 .- fac[s]*c.^gameta )                         # labor supply
-                n = [ n[i] < 0. ? 0. : n[i] for i = 1:length(n)]
-                b = b_grid[b_grid .>= -ϕ] / (1+r) .+ c .- θ[s] .*n .- z[s]; # budget
-        
-                # constrained
-                if b[1] > -ϕ_t[t]
-                    c_c = range(cl[s], stop=c[1], length=Ic);
-                    n_c =   (1 .- fac[s]*c_c.^gameta )                         # labor supply
-                    n_c = [ n_c[i] < 0. ? 0. : n_c[i] for i = 1:length(n_c)]
-                    b_c = -ϕ/(1+r) .+ c_c .- θ[s] .*n_c .- z[s]; # budget
-                    b   = [b_c[1:Ic-1]..., b...];
-                    c   = [c_c[1:Ic-1]..., c...];
-                end
-
-                # update policies
-                itp = extrapolate(    interpolate((b,),c, Gridded(Linear())), Interpolations.Flat() )
-                c_pol[s,:] = itp(  b_grid   )
-                c_pol[s, :] = max(c_pol[s, :], cmin);
-
-                npp   = 1 .- fac[s] .*c_pol[s,:] .^gameta
-                npp[npp .<= 0.] .= 0.
-                n_pol[s,:] .= npp
-                y_pol[s,:] = θ[s] .* n_pol[s,:];
-                bpp        = (1+r) * (b_grid .+ y_pol[s,:] .- c_pol[s,:] .+ z[s])
-                bpp[bpp .<= -ϕ] .= -ϕ
-                b_pol[s,:] .= bpp
-
-                # save policies
-                c_pol_t[s, :, t] = c_pol[s, :];
-                n_pol_t[s, :, t] = n_pol[s, :];
-                y_pol_t[s, :, t] = y_pol[s, :];
-            end
-
-            # save weights needed to iterate distribution
-            idxes       = [searchsortedlast(b_grid,b_pol[s, b]) for s = 1:size(b_pol)[1], b = 1:size(b_pol)[2] ]
-            weights     = zeros(size(b_pol))
-            for s = 1:size(b_pol)[1]
-            for b = 1:size(b_pol)[2]
-                idx             = idxes[s,b]
-                idx_prime       = minimum(  [ idx+1,size(b_pol)[2] ]    )
-                db              =  b_grid[idx_prime] - b_grid[idx]
-                weights[s,b]    = ( b_pol[s,b]  - b_grid[idx] ) / db;
-            end
-            end
-            ib_pol_t[:,:,t] = idxes
-            wei_t[:,:,t]    = weights   
+            # current value of r and ϕ
+            gl_t.r = Tgl.r_t[t]
+            gl_t.ϕ = Tgl.ϕ_t[t+1]
+            # Ensure that constraint is on the grid
+            initilize!(gl_t)
+            # Compute policy functions and save distribution weights
+            EGM_trans!(gl_t,Tgl,t)
         end
 
         # 2) Iterate distribution forward
 
-        JD = JD;  # start from initial ss
+        JD = gl.JD;  # start from initial ss
         for t = 1:T
 
+            # Ensure that constraint is on the grid
+            gl_t.ϕ = Tgl.ϕ_t[t+1]
+            initilize!(gl_t)
+
             # calculate bond market clearing
-            Bdem_t[t] = (sum(JD,dims=1) * b_grid)[1]
+            Tgl.Bdem_t[t] = (sum(JD,dims=1) * gl_t.b_grid)[1]
 
             # calculate other aggregates
-            Y_t[t]    = sum(JD  .* y_pol_t[:,:,t])                         # GDP
-            D_t[t]    = -(sum(JD,dims=1) * (b_grid .* (b_grid .< 0.)))[1]  # Debt
-            D_4Y_t[t] =  D_t[t] / Y_t[t] / 4                               # Debt2GDP annual           
+            Tgl.Y_t[t]    = sum(JD  .* Tgl.y_pol_t[:,:,t])                         # GDP
+            Tgl.D_t[t]    = -(sum(JD,dims=1) * (gl_t.b_grid .* (gl_t.b_grid .< 0.)))[1]  # Debt
+            Tgl.D_4Y_t[t] =  Tgl.D_t[t] / Tgl.Y_t[t] / 4                               # Debt2GDP annual           
 
             # iterate on distribution
-            JDp = zeros( size(JD) )
+            JDp = zeros(size(JD))
             for s = 1:S
             for b = 1:nb
                 for si = 1:S
-                    JDp[si, ib_pol_t[s, b, t]]     = (1 - wei_t[s, b, t]) * Pr[s, si] * JD[s, b]  + JDp[si, ib_pol_t[s, b, t]]
-                    JDp[si, ib_pol_t[s, b, t] + 1] =      wei_t[s, b, t]  * Pr[s, si] * JD[s, b]  + JDp[si, ib_pol_t[s, b, t] + 1]
+                    JDp[si, Tgl.ib_pol_t[s, b, t]]     = (1 - Tgl.wei_t[s, b, t]) * Pr[s, si] * JD[s, b]  + JDp[si, Tgl.ib_pol_t[s, b, t]]
+                    JDp[si, Tgl.ib_pol_t[s, b, t] + 1] =      Tgl.wei_t[s, b, t]  * Pr[s, si] * JD[s, b]  + JDp[si, Tgl.ib_pol_t[s, b, t] + 1]
                 end
             end
             end
 
             # make sure that distribution integrates to 1
-            JD[:,:]  = JDp / sum( JDp )
+            JD[:,:]  = JDp / sum(JDp)
 
         end
         
         # 3) Check convergence
         
         # Market clearing
-        BM_t = Bdem_t - B
+        BM_t = Tgl.Bdem_t .- B
 
         # Metric of deviation
-        res_BM = sqrt(BM_t * BM_t' / T)
+        res_BM = sqrt(BM_t' * BM_t / T)
 
         # Report progress
         println( string(it)*"  "*string(res_BM))
 
-        if res_BM < tol_mkt
+        if res_BM < tol_mkt_trans
             break
         end
 
         # Update 
-        r_t = r_t - (weight.*BM_t)'
+        Tgl.r_t = Tgl.r_t - weight.*BM_t
     end
 
+end
+
+
+"""
+Calculates optimal policy functions with one step of the EGM algorithm.
+"""
+function EGM_trans!(gl::ModelGL,Tgl::TransGL,t::Int)
+    
+        @unpack r,ϕ  = gl    
+        @unpack β, ν,θ, η,ψ,γ, B,S,gameta = gl            # model parameters
+        @unpack cmin = gl                                 # numerical paras
+        @unpack b_grid,Ic,bmax = gl                       # grids
+        @unpack pr,Pr = gl                                # processes
+        @unpack cl, c_pol = gl                            # solutions
+
+        # Update budget constraint
+        τ   = (pr[1]*ν + r/(1+r)*B) / (1 - pr[1]);      # labor tax
+        z   = [ν, -τ.*ones(S-1)...];                    # full transfer scheme (tau tilde in paper)
+
+        # Find consumption at the lower bound of the state space
+        fac = (ψ ./ θ) .^ (1/η);
+        for s = 1:S
+                cl[s] =   find_zero( x -> find_cl(x,s, -Tgl.ϕ_t[t], -Tgl.ϕ_t[t+1], r, θ, z, fac, gameta)
+                , (cmin, 100), Bisection()  )
+        end
+
+        # expected marginal utility tomorrow
+        ui = Pr *  c_pol.^(-γ) ;
+        ui = ui[:, b_grid .>= -ϕ];
+
+        # previous consumption and savings policy
+        for s=1:S
+            # unconstrained
+            c = ((1+r) * β * ui[s,:]) .^ (-1/γ);                   # Euler
+            n =   (1 .- fac[s]*c.^gameta )                         # labor supply
+            n = [ n[i] < 0. ? 0. : n[i] for i = 1:length(n)]
+            b = b_grid[b_grid .>= -ϕ] / (1+r) .+ c .- θ[s] .*n .- z[s]; # budget
+
+            # constrained
+            if b[1] > -ϕ
+                    c_c = range(cl[s], stop=c[1], length=Ic);
+                    n_c =   (1 .- fac[s]*c_c.^gameta )                         # labor supply
+                    n_c = [ n_c[i] < 0. ? 0. : n_c[i] for i = 1:length(n_c)]
+                    b_c = -ϕ/(1+r) .+ c_c .- θ[s] .*n_c .- z[s]; # budget
+                    b   = [b_c[1:Ic-1]..., b...];
+                    c   = [c_c[1:Ic-1]..., c...];
+            end
+
+            # update policies
+            itp = extrapolate(    interpolate((b,),c, Gridded(Linear())), Interpolations.Flat() )
+            gl.c_pol[s,:] = itp(b_grid)
+            gl.c_pol[c_pol .<= cmin] .= cmin
+
+            npp   = 1 .- fac[s] .*gl.c_pol[s,:] .^gameta
+            npp[npp .<= 0.] .= 0.
+            gl.n_pol[s,:] .= npp
+            gl.y_pol[s,:] = θ[s] .* gl.n_pol[s,:];
+            bpp        = (1+r) * (b_grid .+ gl.y_pol[s,:] .- gl.c_pol[s,:] .+ z[s])
+            bpp[bpp .<= -ϕ] .= -ϕ
+            bpp[bpp .>= bmax] .= bmax - 0.000001
+            gl.b_pol[s,:] .= bpp
+
+            # save policies
+            Tgl.c_pol_t[s, :, t] = gl.c_pol[s, :];
+            Tgl.n_pol_t[s, :, t] = gl.n_pol[s, :];
+            Tgl.y_pol_t[s, :, t] = gl.y_pol[s, :];
+        end
+        
+        # save weights needed to iterate distribution
+        idxes       = [searchsortedlast(b_grid,gl.b_pol[s, b]) for s = 1:size(gl.b_pol)[1], b = 1:size(gl.b_pol)[2] ]
+        weights     = zeros(size(gl.b_pol))
+        for s = 1:size(gl.b_pol)[1]
+        for b = 1:size(gl.b_pol)[2]
+            idx             = idxes[s,b]
+            idx_prime       = minimum(  [ idx+1,size(gl.b_pol)[2] ]    )
+            db              =  b_grid[idx_prime] - b_grid[idx]
+            weights[s,b]    = ( gl.b_pol[s,b]  - b_grid[idx] ) / db;
+        end
+        end
+        Tgl.ib_pol_t[:,:,t] = idxes
+        Tgl.wei_t[:,:,t]    = weights 
 end
 
 """
@@ -579,3 +466,8 @@ hello(who::String) = "Hello, $who"
 Return `x + 5`.
 """
 domath(x::Number) = x + 5
+
+
+
+
+

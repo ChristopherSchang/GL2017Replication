@@ -65,13 +65,13 @@ single structure holding all parameters and solutions to the model
     gameta::Float64     = γ / η;
 
     # Initial guesses for calibrated parameters, NE ~ Y
-    β::Float64          = 0.9711;                 # discount factor
-    ν::Float64          = 0.1;                    # UI benefits
+    β::Float64          = 0.8^0.25;                 # discount factor
+    ν::Float64          = νY*NE;                    # UI benefits
     B::Float64          = B_4Y  * NE * 4;         # net supply of bonds
-    ϕ₁::Float64         = 0.959;                  # borrowing constraint in initial ss
+    ϕ₁::Float64         = D1_4Y * NE * 2;                  # borrowing constraint in initial ss
     ϕ₂::Float64         = D2_4Y * NE * 2;         # borrowing constraint in terminal ss
     ϕ::Float64          = ϕ₁
-    ψ::Float64          = 12.48;                  # disutility from labor as if representative agent
+    ψ::Float64          = NE^(-γ) * (1-NE)^η;                  # disutility from labor as if representative agent
 
     # Numerical parameters
     maxit::Int64        = 500;   # maximum number of iterations in calibration
@@ -92,7 +92,7 @@ single structure holding all parameters and solutions to the model
     # productivity shock process
     x::Array{Float64, 1}     = x
     Pr_::Array{Float64, 2}   = Pr_
-    pr_::Array{Float64, 1}    = pr_
+    pr_::Array{Float64, 1}   = pr_
 
     # Add unemployment
     θ::Array{Float64, 1}= [0; exp.(x)... ];
@@ -117,6 +117,14 @@ single structure holding all parameters and solutions to the model
     # Simulation
     JD::Array{Float64, 2}               = ones(S, nb) / (S+nb); # Joint compute_distribution
 
+end
+
+
+"""
+Structure holding transition objects
+"""
+@with_kw mutable struct TransGL
+
     # SS Transition dynamics
 
     # Numerical parameters
@@ -131,11 +139,19 @@ single structure holding all parameters and solutions to the model
     weight::Array{Float64,1}  = speed * weight_ / sum(weight_)
 
     # Transition objects
-    ib_pol_t::Array{Float64,3} = zeros(S, nb, T); # sequence of policy functions
+    S  = 13
+    nb = 200
+    ib_pol_t::Array{Int,3}     = zeros(S, nb, T); # sequence of policy functions
     wei_t::Array{Float64,3}    = zeros(S, nb, T); # sequence of weights on adjacent grid points
     Bdem_t::Array{Float64,1}   = zeros(T);        # bond demand
     Y_t::Array{Float64,1}      = zeros(T);        # GDP
     D_t::Array{Float64,1}      = zeros(T);        # debt
     D_4Y_t::Array{Float64,1}   = zeros(T);        # debt to GDP
+    r_t::Array{Float64,1}      = zeros(T);        # interest rate path
+    ϕ_t::Array{Float64,1}      = zeros(T+1);      # borrowing limit
+
+    c_pol_t::Array{Float64,3} = zeros(S, nb, T);  # consumption policy in each period
+    n_pol_t::Array{Float64,3} = zeros(S, nb, T);  # labour policy in each period
+    y_pol_t::Array{Float64,3} = zeros(S, nb, T);  # income policy in each period
 
 end
