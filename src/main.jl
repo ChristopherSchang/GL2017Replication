@@ -50,12 +50,14 @@ plot!(b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.c_pol[8,b_grid .>= -gl.ϕ],
         linestyle = :dash,label = "θ = 8")
 title!("consumption")
 xaxis!([-gl.ϕ,12.5])
+#savefig("images\\c_pol_iss.png")
 
 plot( b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.n_pol[2,gl.b_grid .>= -gl.ϕ],label =  "θ = 2")
 plot!(b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.n_pol[8,gl.b_grid .>= -gl.ϕ],
         linestyle = :dash,label = "θ = 8")
 title!("labor supply")
 xaxis!([-gl.ϕ,12.5])
+#savefig("images\\l_pol_iss.png")
 
 
 # Figure IV (from paper)
@@ -77,6 +79,8 @@ plot!(b_grid[b_grid .>= -gl_tss.ϕ]/(4*Y1),  bond_distribution2,
 title!("bond distribution")
 xaxis!([-2,14],-2:2:14)
 yaxis!([0,0.004])
+xaxis!([-ϕ,12.5])
+#savefig("images\\b_dist_iss.png")
 
  # Figure III (from paper)
  Tp = 24    # number of periods plotted
@@ -102,3 +106,5 @@ yaxis!([0,0.004])
 
 
 
+
+ 
