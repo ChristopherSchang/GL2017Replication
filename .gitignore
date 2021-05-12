@@ -2,7 +2,6 @@
 *.jl.*.cov
 *.jl.mem
 *.pdf
-/replication-codes-for-Credit-Crises
 /docs/build/
 /docs/Manifest.toml
 Manifest.toml
