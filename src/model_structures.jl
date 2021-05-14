@@ -12,15 +12,17 @@ nx      = 12
 ρ       = 0.967  # persistence of productivity shock
 σϵ      = sqrt(0.017)  # standard deviation  of productivity shock
 
+
+
 mc_productivity  = tauchen(nx, ρ, σϵ, 0.0, 2)
 x               = mc_productivity.state_values
 Pr_             = mc_productivity.p
 pr_              = stationary_distributions(mc_productivity)[1]
 
 #income process from MATLAB code
-#pr = readdlm(".\\replication-codes-for-Credit-Crises\\ppr.csv",',',Float64)[:]
-#Pr = readdlm(".\\replication-codes-for-Credit-Crises\\Pr.csv",',',Float64) 
-#x  = readdlm(".\\replication-codes-for-Credit-Crises\\x.csv",',',Float64)[:]
+pr = readdlm(".\\replication-codes-for-Credit-Crises\\ppr.csv",',',Float64)[:]
+Pr = readdlm(".\\replication-codes-for-Credit-Crises\\Pr.csv",',',Float64) 
+x  = readdlm(".\\replication-codes-for-Credit-Crises\\x.csv",',',Float64)[:]
 
 
 # !!! cannot replicate exact values !!!
@@ -29,7 +31,7 @@ pr_              = stationary_distributions(mc_productivity)[1]
 S               = length(θ);
 fin             = 0.8820;        # job-finding probability
 sep             = 0.0573;        # separation probability
- 
+ """
 # new transition matrix
 Pr              = [1-fin              fin.*pr_';
                     sep .*ones(S-1)  (1-sep) .*Pr_];
@@ -49,7 +51,7 @@ end
 
 pr = initt(Pr,pr_)
  
-
+"""
 
 """
 single structure holding all parameters and solutions to the model
@@ -60,6 +62,8 @@ single structure holding all parameters and solutions to the model
     γ::Float64           = 4.       # risk aversion
     frisch::Float64      = 1.       # avg Frisch elast.
     r::Float64           = 2.5/400  # ss interest rate
+    ρ::Float64           = ρ        # persistence of productivity shock
+    σϵ::Float64          = σϵ       # standard deviation  of productivity shock  
 
 
     # Calibration targets
@@ -124,6 +128,18 @@ single structure holding all parameters and solutions to the model
     # Simulation
     JD::Array{Float64, 2}               = ones(S, nb) / (S+nb); # Joint compute_distribution
 
+    # aggregates
+    B_4Y_actual::Float64    = NaN
+    D_4Y_actual::Float64    = NaN
+    νY_actual::Float64      = NaN
+    NE_actual::Float64      = NaN
+    Y_actual::Float64       = NaN
+    
+
+    # diagnostic
+    calibrated::Bool            = false
+    steadystate_solved::Bool    = false
+    steadystate_type::String    = "initial"
 end
 
 

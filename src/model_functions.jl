@@ -156,7 +156,7 @@ function compute_distribution!(gl::ModelGL)
     end
 
     gl.JD = copy(JD)
-
+    gl.steadystate_solved = true
     return JD
 end
 
@@ -191,6 +191,12 @@ function aggregate!(gl::ModelGL;terminal::Bool = false)
         res_cali = maximum(abs.([  D_4Yi ] .- [  D2_4Y ]));
     end
 
+    #store actual values 
+    gl.B_4Y_actual  = B_4Yi
+    gl.D_4Y_actual  = D_4Yi
+    gl.νY_actual    = νYi
+    gl.NE_actual    = NEi
+    gl.Y_actual     = Yi
     return Bi ,res_mkt ,Yi ,NEi,B_4Yi ,Di,D_4Yi,νYi,res_cali
 end
 
@@ -232,6 +238,7 @@ function calibrate!(gl::ModelGL)
             gl.B = gl.B + 0.1 * (Bi - gl.B);
         end
     end
+    gl.calibrated = true
 end
 
 
@@ -266,7 +273,8 @@ function calibrate_terminal(gl_initial::ModelGL)
  
         end
     end
-
+    gl.calibrated = true
+    gl.steadystate_type = "terminal"
     return gl
 end
 
