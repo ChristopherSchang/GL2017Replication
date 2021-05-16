@@ -20,9 +20,9 @@ Pr_             = mc_productivity.p
 pr_              = stationary_distributions(mc_productivity)[1]
 
 #income process from MATLAB code
-pr = readdlm(".\\replication-codes-for-Credit-Crises\\ppr.csv",',',Float64)[:]
-Pr = readdlm(".\\replication-codes-for-Credit-Crises\\Pr.csv",',',Float64) 
-x  = readdlm(".\\replication-codes-for-Credit-Crises\\x.csv",',',Float64)[:]
+pr = readdlm("ppr.csv",',',Float64)[:]
+Pr = readdlm("Pr.csv",',',Float64) 
+x  = readdlm("x.csv",',',Float64)[:]
 
 
 # !!! cannot replicate exact values !!!
@@ -156,8 +156,8 @@ Structure holding transition objects
     tol_mkt_trans::Float64 = 5e-6;               # tolerance for market clearing (lower than for ss computation)
 
     # Updating weights for interest rate
-    speed::Float64 = 0.5
-    decay::Float64 = 0.3
+    speed::Float64 = 0.1
+    decay::Float64 = 0.1
     weight_::Array{Float64,1} = exp.(-decay*(0:T-1))
     weight::Array{Float64,1}  = speed * weight_ / sum(weight_)
 
@@ -176,5 +176,7 @@ Structure holding transition objects
     c_pol_t::Array{Float64,3} = zeros(S, nb, T);  # consumption policy in each period
     n_pol_t::Array{Float64,3} = zeros(S, nb, T);  # labour policy in each period
     y_pol_t::Array{Float64,3} = zeros(S, nb, T);  # income policy in each period
+
+    JD_t::Array{Float64,3} = zeros(S,nb,T); # Joint compute_distribution at each point in time
 
 end

@@ -45,6 +45,7 @@ function EGM!(gl::ModelGL)
     # Find consumption at the lower bound of the state space
     fac = (ψ ./ θ) .^ (1/η);
     for s = 1:S
+        
         cl[s] =   find_zero( x -> find_cl(x,s, -ϕ, -ϕ, r, θ, z, fac, gameta)
                                 , (cmin, 100), Bisection()  )
     end
@@ -284,7 +285,7 @@ compute transition path.
 """
 
 function transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
-    @unpack T, maxit_trans, tol_mkt_trans, weight = Tgl
+    @unpack T, maxit_trans, tol_mkt_trans, weight, JD_t = Tgl
     @unpack Pr,B,nb = gl        
 
     gl_t = deepcopy(gl)  # define new object for each time period
@@ -296,11 +297,11 @@ function transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
 
     # Initial guess of r_t
     Tgl.r_t = gl_tss.r .* ones(T)  # interest rate in terminal ss
-
     for it = 1:maxit_trans
     
         # 1) Iterate HH problem backwards      
         gl_t.c_pol = gl_tss.c_pol   # start from terminal ss
+        
         for t = T:-1:1
             # current value of r and ϕ
             gl_t.r = Tgl.r_t[t]
@@ -315,6 +316,8 @@ function transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
 
         JD = gl.JD;  # start from initial ss
         for t = 1:T
+            # store distribution over assets and productivity states
+            JD_t[:,:,t] .= JD
 
             # Ensure that constraint is on the grid
             gl_t.ϕ = Tgl.ϕ_t[t+1]
@@ -340,7 +343,7 @@ function transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
             end
 
             # make sure that distribution integrates to 1
-            JD[:,:]  = JDp / sum(JDp)
+            JD[:,:]  = JDp / sum(JDp)            
 
         end
         

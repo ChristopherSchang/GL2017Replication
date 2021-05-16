@@ -14,7 +14,7 @@ describe(gl)
 
 # 3) calibrate to target values for initial ss  -- requires 1)
 calibrate!(gl)
-describe(gl )
+describe(gl)
 
 # 4) calibrate to target values for terminal ss -- requires 3)  
 gl_tss = calibrate_terminal(gl)
@@ -28,6 +28,8 @@ describe(gl,gl_tss)
 
 Tgl = TransGL()
 gl_trans = transition!(gl,gl_tss,Tgl)
+
+
 
 
 # -----------------------------------------------------------------------------
@@ -84,11 +86,11 @@ xaxis!([-gl.ϕ,12.5])
  # Figure III (from paper)
  Tp = 24    # number of periods plotted
 
- plot(0:Tp, ϕ_t[1:Tp+1]/(4*Y1))         # borrowing limit
- plot(0:Tp, D_4Y_t[1:Tp+1])             # debt2gdp ratio
- plot(0:Tp, [gl.r;r_t[1:Tp]]*400)       # annualized interest rate
- plot(0:Tp, [0, 100*(Y_t[1:Tp]/Y1-1)])   # output deviation from steady state
-
+ p1 = plot(0:Tp, Tgl.ϕ_t[1:Tp+1]./(4*Tgl.Y_t[1:Tp+1]),ylims = (0.5,1), yticks = 0.5:0.1:10, legend = false, title = "borrowing limit")         # borrowing limit
+ p2 = plot(0:Tp, Tgl.D_4Y_t[1:Tp+1], ylims = (0,0.2), yticks = 0:0.02:0.2, legend = false, title = "household debt-to-GDP ratio")             # debt2gdp ratio
+ p3 = plot(0:Tp, [gl.r;Tgl.r_t[1:Tp]].*400, ylims = (-2,2.5), yticks = -2:0.5:2, legend = false, title = "interest rate")       # annualized interest rate
+ p4 = plot(0:Tp, [0, 100*(Tgl.Y_t[1:Tp+1]./Y1.-1)], ylims = (-1.2,0), yticks = -1:0.2:0, legend = false, title = "output")   # output deviation from steady state
+ plot(p1, p2, p3, p4, layout = (2, 2), legend = false)
 
 
 
