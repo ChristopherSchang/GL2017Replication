@@ -297,10 +297,12 @@ function transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
 
     # Initial guess of r_t
     Tgl.r_t = gl_tss.r .* ones(T)  # interest rate in terminal ss
+    Tgl.JD_t[:,:,end] = gl_tss.JD # distribution in terminal ss
     for it = 1:maxit_trans
     
         # 1) Iterate HH problem backwards      
         gl_t.c_pol = gl_tss.c_pol   # start from terminal ss
+        gl_t.JD = gl_tss.JD # distribution in terminal ss
         
         for t = T:-1:1
             # current value of r and ϕ
@@ -315,20 +317,27 @@ function transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
         # 2) Iterate distribution forward
 
         JD = gl.JD;  # start from initial ss
+        
         for t = 1:T
             # store distribution over assets and productivity states
-            JD_t[:,:,t] .= JD
+            Tgl.JD_t[:,:,t] = JD
+            gl_t.JD = JD
+#            if t==1
+#                println("is the distribution correct?", Tgl.JD_t[:,:,t] == gl.JD)
+#                println("is the second version of the distribution correct?", gl_t.JD == JD)
+#            end
+            
 
             # Ensure that constraint is on the grid
             gl_t.ϕ = Tgl.ϕ_t[t+1]
             initilize!(gl_t)
 
             # calculate bond market clearing
-            Tgl.Bdem_t[t] = (sum(JD,dims=1) * gl_t.b_grid)[1]
+            Tgl.Bdem_t[t] = (sum(Tgl.JD_t[:,:,t],dims=1) * gl_t.b_grid)[1]
 
             # calculate other aggregates
-            Tgl.Y_t[t]    = sum(JD  .* Tgl.y_pol_t[:,:,t])                         # GDP
-            Tgl.D_t[t]    = -(sum(JD,dims=1) * (gl_t.b_grid .* (gl_t.b_grid .< 0.)))[1]  # Debt
+            Tgl.Y_t[t]    = sum(Tgl.JD_t[:,:,t]  .* Tgl.y_pol_t[:,:,t])                         # GDP
+            Tgl.D_t[t]    = -(sum(Tgl.JD_t[:,:,t],dims=1) * (gl_t.b_grid .* (gl_t.b_grid .< 0.)))[1]  # Debt
             Tgl.D_4Y_t[t] =  Tgl.D_t[t] / Tgl.Y_t[t] / 4                               # Debt2GDP annual           
 
             # iterate on distribution
@@ -336,14 +345,19 @@ function transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
             for s = 1:S
             for b = 1:nb
                 for si = 1:S
-                    JDp[si, Tgl.ib_pol_t[s, b, t]]     = (1 - Tgl.wei_t[s, b, t]) * Pr[s, si] * JD[s, b]  + JDp[si, Tgl.ib_pol_t[s, b, t]]
-                    JDp[si, Tgl.ib_pol_t[s, b, t] + 1] =      Tgl.wei_t[s, b, t]  * Pr[s, si] * JD[s, b]  + JDp[si, Tgl.ib_pol_t[s, b, t] + 1]
+                    JDp[si, Tgl.ib_pol_t[s, b, t]]     = (1 - Tgl.wei_t[s, b, t]) * Pr[s, si] * Tgl.JD_t[s,b,t]  + JDp[si, Tgl.ib_pol_t[s, b, t]]
+                    JDp[si, Tgl.ib_pol_t[s, b, t] + 1] =      Tgl.wei_t[s, b, t]  * Pr[s, si] * Tgl.JD_t[s,b,t]  + JDp[si, Tgl.ib_pol_t[s, b, t] + 1]
                 end
             end
             end
 
+
+
             # make sure that distribution integrates to 1
-            JD[:,:]  = JDp / sum(JDp)            
+            #JD[:,:]  = JDp / sum(JDp)   
+            JD = JDp / sum(JDp)   
+            
+
 
         end
         
