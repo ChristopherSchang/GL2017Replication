@@ -20,6 +20,7 @@ Pr_             = mc_productivity.p
 pr_              = stationary_distributions(mc_productivity)[1]
 
 #income process from MATLAB code
+cd(@__DIR__)
 pr = readdlm("ppr.csv",',',Float64)[:]
 Pr = readdlm("Pr.csv",',',Float64) 
 x  = readdlm("x.csv",',',Float64)[:]
@@ -54,7 +55,7 @@ pr = initt(Pr,pr_)
 """
 
 """
-single structure holding all parameters and solutions to the model
+Structure holding all parameters and solutions to the steady-state model
 """
 @with_kw mutable struct ModelGL
 

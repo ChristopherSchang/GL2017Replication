@@ -5,55 +5,29 @@
 ```@contents
 ```
 
-In this replication study, we do ...
+## About The Project
 
+This replication study replicates parts of the paper ´Credit crises, precautionary savings, and the liquidity trap´ (Guerrieri, Lorenzoni (2017)). The code notation mostly follows the original version of the authors in MATLAB.
 
-## Solving the Model
-
-An easy way to solve the model in steady-state with a given parameterization is shown below. Note that all the steps have to occur sequentially.
-First, instantiate the ModelGL structure that holds all parameter values and solutions of the model.
+## Structure
+The Package is build around two structures: 
+1. The ModelGL structure that holds all parameters and (if solved/calibrated) the policy functions and aggregate variables.
 ```
 gl = ModelGL() 
 ```
-Calling 
+At any point you query the status of the model with
 ```
-initialize!(gl)
-``` 
-On the object will set up the stationary distribution across productivity states and add the constraint explicitly to the bond grid.
-Next,
+describe(gl)
 ```
-EGM!(gl)
+2. The TransGL structure that holds the objects for the transition from an initital to a terminal steady-state
 ```
-solves for the optimal policies.
-```
-compute_distribution!(gl)
-```
-calculates the joint distribution over productivity states and bond holdings and stores them in gl.JD.
-```
-aggregate!(gl)
-```
-computes aggregate values from the joint distribution.
-
- 
-## Calibrating the Model
-
-To calibrate the model in steady-state to a given set of target values do the following:
-First, instantiate the ModelGL structure that holds all parameter values, solutions and target values of the model.
-```
-gl = ModelGL() 
-```
-running the calibrate function will solve the steady-state model many times (steps from above) and update parameters in each iteration.
-```
-calibrate!(gl)
-```
-The solution calibrated parameters and solutions will be stored in the ModelGL structure.
-
-## Functions
-
-```@autodocs
-Modules = [GL2017Replication]
+gl_trans = TransGL() 
 ```
 
+## References 
+Guerrieri, V. & Lorenzoni, G.
+Credit crises, precautionary savings, and the liquidity trap 
+The Quarterly Journal of Economics, Oxford University Press, 2017, 132, 1427-1467
 
 end
 
