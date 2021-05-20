@@ -41,8 +41,8 @@ end
     @test gl.D_4Y_actual < gl.B_4Y_actual
 end
 
-#steady_mat needs to be defined
-"""
+cd(@__DIR__)
+steady_mat = matopen("steady.mat")
 @testset "calibrate" begin
     gl = ModelGL()
     load_parameters_iss!(gl)
@@ -73,4 +73,4 @@ end
     #end
      
 end
-"""
+ 
