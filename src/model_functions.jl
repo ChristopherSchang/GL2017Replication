@@ -266,11 +266,14 @@ Calibrate the model to the terminal target value (only borrowing constraint)
 Requires a calibrated initital steady-state object.
 Returns a new terminal steady-state object.
 """
-function calibrate_terminal(gl_initial::ModelGL)
+function calibrate_terminal(gl_initial::ModelGL;load_params=false)
     
     gl = deepcopy(gl_initial)   # terminal steadystate
     gl.ϕ = gl.ϕ₂                # update initial guess
 
+    if load_params == true
+        load_parameters_tss!(gl)
+    end
     @unpack D2_4Y  = gl
     @unpack tol_cali,tol_mkt  = gl
     ite = 0
@@ -527,6 +530,25 @@ Return `x + 5`.
 domath(x::Number) = x + 5
 
 
+"""
+    load_parameters_iss!(gl))
 
+Pre-load calibrated parameters to speed up calibration.
+"""
+function load_parameters_iss!(gl)
+    gl.β = 0.9774431455410588
+    gl.ϕ = 1.6043143416048709
+    gl.ν = 0.1669508673012496
+    gl.ψ = 15.882767548488852
+    gl.B = 2.6712129167713377
+end
 
+"""
+    load_parameters_tss!(gl))
 
+Pre-load calibrated parameters to speed up calibration (terminal).
+"""
+function load_parameters_tss!(gl)
+    gl.r = 0.003733964921583098
+    gl.ϕ = 0.8983295288221897
+end

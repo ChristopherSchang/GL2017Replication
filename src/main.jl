@@ -13,11 +13,13 @@ compute_steady_state!(gl)
 describe(gl)
 
 # 3) calibrate to target values for initial ss  -- requires 1)
+load_parameters_iss!(gl)        #pre-load parameters to speed up calibration
 calibrate!(gl)
 describe(gl)
 
 # 4) calibrate to target values for terminal ss -- requires 3)  
-gl_tss = calibrate_terminal(gl)
+#gl_tss = calibrate_terminal(gl)
+gl_tss = calibrate_terminal(gl,load_params=true) #pre-load parameters to speed up calibration
 describe(gl,gl_tss)
 
 # save("gl.jld","gl",gl,"gl_tss",gl_tss)
