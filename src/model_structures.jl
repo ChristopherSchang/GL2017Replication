@@ -13,13 +13,6 @@ nx      = 12
 ρ       = 0.967  # persistence of productivity shock
 σϵ      = sqrt(0.017)  # standard deviation  of productivity shock
 
-
-
-mc_productivity  = tauchen(nx, ρ, σϵ, 0.0, 2)
-x               = mc_productivity.state_values
-Pr_             = mc_productivity.p
-pr_              = stationary_distributions(mc_productivity)[1]
-
 #income process from MATLAB code
 cd(@__DIR__)
 pr = readdlm("ppr.csv",',',Float64)[:]
@@ -27,16 +20,19 @@ Pr = readdlm("Pr.csv",',',Float64)
 x  = readdlm("x.csv",',',Float64)[:]
 steady_mat = matopen("steady.mat")
 #read(steady_mat, "b_pol1")
-
-
-# !!! cannot replicate exact values !!!
-# -----------------------------------------------------------------------------
+ 
 θ               = [0; exp.(x)... ];
 S               = length(θ);
 fin             = 0.8820;        # job-finding probability
 sep             = 0.0573;        # separation probability
+
  """
 # new transition matrix
+mc_productivity  = tauchen(nx, ρ, σϵ, 0.0, 2)
+x               = mc_productivity.state_values
+Pr_             = mc_productivity.p
+pr_              = stationary_distributions(mc_productivity)[1]
+
 Pr              = [1-fin              fin.*pr_';
                     sep .*ones(S-1)  (1-sep) .*Pr_];
     
