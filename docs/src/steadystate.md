@@ -1,29 +1,5 @@
-# GL2017Replication
+# Steady States
 
-## About The Project
-
-This replication study replicates parts of the paper `Credit crises, precautionary savings, and the liquidity trap` (Guerrieri, Lorenzoni (2017)). The code notation mostly follows the original version of the authors in MATLAB.
-
-## Status
-
-Currently still in development!!!
-
-## Table of Contents
- 
- 
-  - [Solving the Model](#solving-the-model)
-  - [Calibrating the Steady-State](#calibrating-the-steady-state)
-    - [Initial Steady-State](#initial-steady-state)
-    - [Terminal Steady-State](#terminal-steady-state)
-  - [Results](#results)
-    - [Policies in Steady-State (initial)](#policies-in-steady-state-initial)
-    - [Distribution in Steady-State (initial)](#distribution-in-steady-state-initial)
-  - [Transition Dynamics](#transition-dynamics)
-  - [References](#references)
-
-## Example
-
-The file main.jl in the src folder contains an example work flow to solve the model.
 
 ## Solving the Model
 
@@ -78,23 +54,7 @@ describe(gl,gl_tss)
 ``` 
 for a side-by-side comparison of the initial and terminal steady-state.
 
-### Policies in Steady-State (initial)
-
-<p float="left">
-  <img src="images/c_pol_iss.png"    width="350"   />
-  <img src="images/l_pol_iss.png"    width="350"   />  
-</p> 
-
-### Distribution in Steady-State
-
-<p float="left"> 
-  <img src="images/b_dist.png"      width="350" />
-</p> 
 
 
-## Transition Dynamics
+end
 
-## References 
-Guerrieri, V. & Lorenzoni, G.
-Credit crises, precautionary savings, and the liquidity trap 
-The Quarterly Journal of Economics, Oxford University Press, 2017, 132, 1427-1467

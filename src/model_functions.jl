@@ -5,7 +5,11 @@ using Roots
 using Interpolations
 using LinearAlgebra
 
+"""
+    compute_steady_state!(gl::ModelGL) 
 
+Computes steady-state policy functions with given set of parameters.
+"""
 function compute_steady_state!(gl::ModelGL) 
     initilize!(gl)
     EGM!(gl)
@@ -15,6 +19,8 @@ end
 
 
 """
+    initilize!(gl::ModelGL)
+
 Adds borrowing constraint as gridpoint
 """
 function initilize!(gl::ModelGL)
@@ -27,6 +33,8 @@ end
 
 
 """
+    EGM!(gl::ModelGL)
+
 Calculates optimal policy functions with the EGM algorithm.
 """
 function EGM!(gl::ModelGL)
@@ -108,7 +116,10 @@ function EGM!(gl::ModelGL)
     end
 end
 
-""" Computes the joint distribution of productivity and bond holdings.
+""" 
+    compute_distribution!(gl::ModelGL)
+
+Computes the joint distribution of productivity and bond holdings.
 Requires that optimal policies have already been solved (EGM!)
 """
 function compute_distribution!(gl::ModelGL)
@@ -162,8 +173,11 @@ function compute_distribution!(gl::ModelGL)
 end
 
 """
+    aggregate!(gl::ModelGL;terminal::Bool = false)
+
 Computes aggregate values and their distance from target.
-Requires that the joint distribution has already been solved (computer_distribution!)
+Requires that the joint distribution has already been solved (compute_distribution!)
+If ´terminal = true´ only the terminal debt target will be considered.
 """
 function aggregate!(gl::ModelGL;terminal::Bool = false)
 
@@ -202,7 +216,9 @@ function aggregate!(gl::ModelGL;terminal::Bool = false)
 end
 
 """
-calibrate the model to the target values.
+    calibrate!(gl::ModelGL)
+
+Calibrate the model to the target values.
 Does not require any prior function calls.
 """
 function calibrate!(gl::ModelGL)
@@ -244,7 +260,9 @@ end
 
 
 """
-calibrate the model to the terminal target value (only borrowing constraint)
+    gl_tss = calibrate_terminal(gl_initial::ModelGL)
+
+Calibrate the model to the terminal target value (only borrowing constraint)
 Requires a calibrated initital steady-state object.
 Returns a new terminal steady-state object.
 """
@@ -281,9 +299,10 @@ end
 
 
 """
-compute transition path.
-"""
+    transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
 
+Computes transition path.
+"""
 function transition!(gl::ModelGL,gl_tss::ModelGL,Tgl::TransGL)
     @unpack T, maxit_trans, tol_mkt_trans, weight, JD_t = Tgl
     @unpack Pr,B,nb = gl        
@@ -384,6 +403,8 @@ end
 
 
 """
+    EGM_trans!(gl::ModelGL,Tgl::TransGL,t::Int)
+
 Calculates optimal policy functions with one step of the EGM algorithm.
 """
 function EGM_trans!(gl::ModelGL,Tgl::TransGL,t::Int)
@@ -464,8 +485,21 @@ function EGM_trans!(gl::ModelGL,Tgl::TransGL,t::Int)
 end
 
 """
+    F = find_cl(c, j, b1, b2, r, θ, z, fac, gameta)
+
 Helper function to find consumption at the constraint.
-Returns the residual the budget constraint
+Returns the residual the budget constraint.
+
+* `c` - consumption
+* `j` - state index
+* `b1` - bond holdings today
+* `b2` - bond holdings tomorrow
+* `r` - interest rate
+* `θ` - state value array
+* `fac` - parameter
+* `gameta` - parameter
+Return
+* `F` - residual budget constraint
 """
 function find_cl(c, j, b1, b2, r, θ, z, fac, gameta)
     # Find consumption for current assets b1 and next assets b2

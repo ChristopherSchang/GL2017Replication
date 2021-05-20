@@ -1,15 +1,31 @@
-using PrettyTables
- 
+using PrettyTables,Plots,Statistics,Parameters
+
+"""
+        describe(gl::ModelGL,gl_2::ModelGL)
+
+Print solution status as well as values and description of parameters and aggregate values:
+Comparison of initial and terminal steady-state.
+"""
 function describe(gl::ModelGL,gl_2::ModelGL)
     print_status(gl,gl_2 ) 
     print_params(gl,gl_2 ) 
 end
 
+"""
+        describe(gl::ModelGL)   
+
+Print solution status as well as values and description of parameters and aggregate values.
+"""
 function describe(gl::ModelGL)
     print_status(gl ) 
     print_params(gl ) 
 end
 
+"""
+        print_params(gl::ModelGL)
+
+Print values and description of parameters and aggregate values.
+"""
 function print_params(gl::ModelGL) 
 
         params = ["β","ν", "ϕ","γ","η","fin","sep"]
@@ -70,7 +86,13 @@ function print_params(gl::ModelGL)
         crop = :none)
 
 end
-    
+
+"""
+        print_params(gl::ModelGL,gl_2::ModelGL)
+
+Print values and description of parameters and aggregate values: 
+Comparison of initial and terminal steady-state.
+"""
 function print_params(gl::ModelGL,gl_2::ModelGL) 
 
         params = ["β","ν", "ϕ","γ","η","fin","sep","ρ","σϵ"]
@@ -108,8 +130,12 @@ function print_params(gl::ModelGL,gl_2::ModelGL)
 
 end
  
+"""
+        print_status(gl::ModelGL) 
 
-function print_status(gl::ModelGL ) 
+Print solution status.
+"""
+function print_status(gl::ModelGL) 
 
 
         data = ["Model" ""   "";
@@ -131,7 +157,11 @@ function print_status(gl::ModelGL )
 end
 
 
+"""
+        print_status(gl::ModelGL,gl_2::ModelGL) 
 
+Print solution status of both models.
+"""
 function print_status(gl::ModelGL,gl_2::ModelGL) 
 
 

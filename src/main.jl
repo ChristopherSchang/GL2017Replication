@@ -8,7 +8,7 @@ using .GL2017Replication
 gl = ModelGL()
 describe(gl)
  
-# 2) solve model with default parameters
+# 2) solve model with default parameters  -- requires 1)
 compute_steady_state!(gl)
 describe(gl)
 
