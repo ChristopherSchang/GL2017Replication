@@ -4,11 +4,13 @@
 
 This replication study replicates parts of the paper `Credit crises, precautionary savings, and the liquidity trap` (Guerrieri, Lorenzoni (2017)). The code notation mostly follows the original version of the authors in MATLAB.
 
+## Status
+
+Currently still in development!
+
 ## Table of Contents
  
-- [GL2017Replication](#gl2017replication)
-  - [About The Project](#about-the-project)
-  - [Table of Contents](#table-of-contents)
+ 
   - [Solving the Model](#solving-the-model)
   - [Calibrating the Steady-State](#calibrating-the-steady-state)
     - [Initial Steady-State](#initial-steady-state)
