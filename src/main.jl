@@ -93,7 +93,7 @@ xaxis!([-gl.ϕ,12.5])
  p3 = plot(0:Tp, [gl.r;Tgl.r_t[1:Tp]].*400, ylims = (-2,2.5), yticks = -2:0.5:2, legend = false, title = "interest rate")       # annualized interest rate
  p4 = plot(0:Tp, [0, 100*(Tgl.Y_t[1:Tp+1]./Y1.-1)], ylims = (-1.2,0), yticks = -1:0.2:0, legend = false, title = "output")   # output deviation from steady state
  plot(p1, p2, p3, p4, layout = (2, 2), legend = false)
-#savefig("images\\trans.png")
+savefig("images\\trans.png")
 
 
 
