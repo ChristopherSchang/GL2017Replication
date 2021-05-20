@@ -54,22 +54,6 @@ describe(gl,gl_tss)
 ``` 
 for a side-by-side comparison of the initial and terminal steady-state.
 
-### Policies in Steady-State (initial)
-
-<p float="left">
-  <img src="images/c_pol_iss.png"    width="350"   />
-  <img src="../../images/l_pol_iss.png"    width="350"   />  
-</p> 
-
-### Distribution in Steady-State (initial)
-
-<p float="left"> 
-  <img src="../../images/b_dist.png"      width="350" />
-</p> 
-
-
-
-
 
 
 end
