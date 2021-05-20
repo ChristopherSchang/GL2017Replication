@@ -2,6 +2,7 @@
 using Parameters
 using QuantEcon
 using DelimitedFiles
+using MAT
 
 
 # -----------------------------------------------------------------------------
@@ -23,6 +24,8 @@ pr_              = stationary_distributions(mc_productivity)[1]
 pr = readdlm("ppr.csv",',',Float64)[:]
 Pr = readdlm("Pr.csv",',',Float64) 
 x  = readdlm("x.csv",',',Float64)[:]
+steady_mat = matopen("steady.mat")
+#read(steady_mat, "b_pol1")
 
 
 # !!! cannot replicate exact values !!!
@@ -157,7 +160,7 @@ Structure holding transition objects
 
     # Updating weights for interest rate
     speed::Float64 = 0.1
-    decay::Float64 = 0.1
+    decay::Float64 = 0.01
     weight_::Array{Float64,1} = exp.(-decay*(0:T-1))
     weight::Array{Float64,1}  = speed * weight_ / sum(weight_)
 
