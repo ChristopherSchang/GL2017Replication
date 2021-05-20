@@ -4,5 +4,4 @@ This part is of particular interest. When we tried to replicate Figure 3 of the 
 
 To the previously obtained steady states, we add a specific mutable structure `TransGl`. This includes the number of periods over which the transition takes place, the maximum number of iterations, the tolerance level, the already mentioned speed and decay parameters, and objects containing the evolution of all aggregates <, distributions and policies of interest over the entire transition period. 
 
-end
 
