@@ -19,7 +19,7 @@ This replication study replicates parts of the paper `Credit crises, precautiona
 
 ## Get Started
 
-To get started, clone the repository to your local machine. Start Julia and navigate to the \src folder, press `]` to enter the package manager and type `activate .` to activate the package environment. Include the GL2017Replication.jl package file into your script and import the package:
+To get started, clone the repository to your local machine. Start Julia and navigate to the \src folder, press `]` to enter the package manager and type `activate .` to activate the package environment. You should now see the new package prompt. Type `instantiate` to resolve all package dependencies. Include the GL2017Replication.jl package file into your script and import the package:
 ```
 include("GL2017Replication.jl")
 using .GL2017Replication
