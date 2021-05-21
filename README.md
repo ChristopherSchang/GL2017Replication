@@ -3,21 +3,17 @@
 ## About The Project
 
 This replication study replicates parts of the paper `Credit crises, precautionary savings, and the liquidity trap` (Guerrieri, Lorenzoni (2017)). The code notation mostly follows the original version of the authors in MATLAB.
-
-## Status
-
-Currently still in development!!!
-
+ 
 ## Table of Contents
- 
- 
+
+  - [Example](#example)
   - [Solving the Model](#solving-the-model)
   - [Calibrating the Steady-State](#calibrating-the-steady-state)
     - [Initial Steady-State](#initial-steady-state)
     - [Terminal Steady-State](#terminal-steady-state)
   - [Results](#results)
     - [Policies in Steady-State (initial)](#policies-in-steady-state-initial)
-    - [Distribution in Steady-State (initial)](#distribution-in-steady-state-initial)
+    - [Steady-State Comparison](#steady-state-comparison)
   - [Transition Dynamics](#transition-dynamics)
   - [References](#references)
 
@@ -79,26 +75,26 @@ describe(gl,gl_tss)
 for a side-by-side comparison of the initial and terminal steady-state.
 
 ### Policies in Steady-State (initial)
-
+Figure I in the paper.
 <p float="left">
-  <img src="images/c_pol_iss.png"    width="350"   />
-  <img src="images/l_pol_iss.png"    width="350"   />  
+  <img src="images/figure1.png"    width="500"  /> 
 </p> 
 
-### Distribution in Steady-State
-
+### Steady-State Comparison
+Figure IV in the paper.
 <p float="left"> 
-  <img src="images/b_dist.png"      width="350" />
+  <img src="images/figure4.png"      width="350" />
 </p> 
 
 
 ## Transition Dynamics
+:information_source: Preliminary: Does not coincide with paper result.
 
-This part is of particular interest. When we tried to replicate Figure 3 of the original paper without loading the transition objects previously obtained by the authors (i.e., we set `rerun` different from 1), but keeping the default values of `speed = 0.5` and `decay = 0.3` (two parameters governing the updating rule of ), we couldn't make the code converge. It seems to us that the authors used two different parameters that are a priori impossible to deduce. Importantly, for one of the few combinations of `speed` and `decay` that would produce output (i.e., 0.1 and 0.01) in the original MATLAB file, we obtain essentially the same evolution for all variables included in Figure 3 (trivially, the borrowing constraint, but also household debt, the interest rate, and aggregate output). This somehow reassures us about the validity of our approach, although we cannot obviously rule out completely the possibility that we missed some other features of the code explaining the puzzle. 
+This part is of particular interest. When we tried to replicate Figure 3 of the original paper without loading the transition objects previously obtained by the authors (i.e., we set `rerun` different from 1), but keeping the default values of `speed = 0.5` and `decay = 0.3` (two parameters governing the updating rule of ), we couldn't make the code converge. Potentially the authors used two different parameters that are a priori impossible to deduce. Importantly, for the combination of `speed` and `decay` that we use (i.e., 0.1 and 0.01) we reach a convergence up to a tolerance of `~0.0025` (after 400 iterations). Using the same numerical parameters in the original MATLAB code we obtain essentially the same evolution for all variables included in Figure 3 (trivially, the borrowing constraint, but also household debt, the interest rate, and aggregate output). This somehow reassures us about the validity of our approach, although we cannot obviously rule out completely the possibility that we missed some other features of the code explaining the puzzle. 
 Below, we show our reproduction of Figure 3 in the original paper.
 
 <p float="left"> 
-  <img src="images/trans.png"      width="350" />
+  <img src="images/trans.png"      width="450" />
 </p> 
 
 ## References 

@@ -192,4 +192,114 @@ end
 
 
 
+"""
+        (F1,p1,p2) = plots_figure_1(gl::ModelGL)
+
+Plots figure I graphs.        
+"""
+function plots_figure_1(gl::ModelGL)
+        plotly(linewidth = 2.)
+  
+        @unpack b_grid,pr = gl                  # objects that are identical across both steady states
+ 
+        # Figure I (from paper)
+
+        Y1 = gl.Y_actual
+        p1 = plot( b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.c_pol[2,b_grid .>= -gl.ϕ],label = "θ = 2")
+        plot!(b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.c_pol[8,b_grid .>= -gl.ϕ],
+                linestyle = :dash,label = "θ = 8")
+        title!("consumption")
+        xaxis!([-gl.ϕ,12.5])
+ 
+
+        p2 = plot( b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.n_pol[2,gl.b_grid .>= -gl.ϕ],label =  "θ = 2")
+        plot!(b_grid[b_grid .>= -gl.ϕ]/(4*Y1), gl.n_pol[8,gl.b_grid .>= -gl.ϕ],
+                linestyle = :dash,label = "θ = 8")
+        title!("labor supply")
+        xaxis!([-gl.ϕ,12.5])
+ 
+        F1 = plot(p1, p2, layout = (1, 2), legend = false) 
+        display(F1)
+        return (F1,p1,p2)
+end
+
+
+"""
+        (F4,p1,p2) = plots_figure_4(gl::ModelGL,gl_tss::ModelGL)
+
+Plots figure IV graphs.        
+"""
+function plots_figure_4(gl::ModelGL,gl_tss::ModelGL)
+        plotly(linewidth = 2.)
+  
+        @unpack b_grid,pr = gl                  # objects that are identical across both steady states
+ 
+        # Figure IV (from paper)
+        Y1 = gl.Y_actual
+        b_acc1 =  ((pr'*gl.b_pol[:,b_grid     .>= -gl.ϕ])'     .- b_grid[b_grid .>= -gl.ϕ])/(4*Y1)
+        b_acc2 =  ((pr'*gl_tss.b_pol[:,b_grid .>= -gl.ϕ])' .- b_grid[b_grid .>= -gl.ϕ])/(4*Y1)
+        p1 =plot( b_grid[b_grid .>= -gl.ϕ]/(4*Y1), b_acc1)
+        plot!(b_grid[b_grid .>= -gl.ϕ]/(4*Y1), b_acc2,
+                linestyle = :dash)
+        title!("bond accumulation policy")
+        xaxis!([-2,14],-2:2:14)
+        yaxis!([-0.4,0.6],-0.4:0.2:0.6)
+ 
+
+        bond_distribution1 = dropdims( pr'    *gl.JD[:,b_grid .>= -gl.ϕ]     ,dims=1)
+        bond_distribution2 = dropdims( pr'*gl_tss.JD[:,b_grid .>= -gl.ϕ] ,dims=1)
+        p2 =plot( b_grid[b_grid .>= -gl.ϕ]/(4*Y1),  bond_distribution1,label = "initial")
+        plot!(b_grid[b_grid .>= -gl.ϕ]/(4*Y1),  bond_distribution2,label = "terminal",
+                linestyle = :dash)
+        title!("bond distribution")
+        xaxis!([-2,14],-2:2:14)
+        yaxis!([0,0.004])
+        xaxis!([-gl.ϕ,12.5])
+ 
+        F4 = plot(p1, p2, layout = (2, 1), legend = false) 
+        display(F4)
+
+        return (F4,p1,p2)
+end
+
+
+"""
+        (F3,p1,p2,p3,p4)  = plots_figure_4(gl::ModelGL,gl_tss::ModelGL)
+
+Plots figure III graphs.        
+"""
+function plots_figure_3(gl::ModelGL,Tgl::TransGL)
+        plotly(linewidth = 2.)
+        Y1 = gl.Y_actual
+ 
+        # Figure III (from paper)
+        Tp = 24    # number of periods plotted
+
+        p1 = plot(0:Tp, Tgl.ϕ_t[1:Tp+1]./(4*Tgl.Y_t[1:Tp+1]),ylims = (0.5,1), yticks = 0.5:0.1:10, legend = false, title = "borrowing limit")         # borrowing limit
+        p2 = plot(0:Tp, Tgl.D_4Y_t[1:Tp+1], ylims = (0.08,0.2), yticks = 0:0.02:0.2, legend = false, title = "household debt-to-GDP ratio")             # debt2gdp ratio
+        p3 = plot(0:Tp, [gl.r;Tgl.r_t[1:Tp]].*400, ylims = (-2,2.5), yticks = -2:0.5:2, legend = false, title = "interest rate")       # annualized interest rate
+        p4 = plot(0:Tp, [0, 100*(Tgl.Y_t[1:Tp+1]./Y1.-1)], ylims = (-1.2,0), yticks = -1:0.2:0, legend = false, title = "output")   # output deviation from steady state
+        F3 = plot(p1, p2, p3, p4, layout = (2, 2), legend = false)
+ 
+        display(F3)
+
+        return (F3,p1,p2,p3,p4) 
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  

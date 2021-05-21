@@ -219,9 +219,14 @@ end
     calibrate!(gl::ModelGL)
 
 Calibrate the model to the target values.
-Does not require any prior function calls.
+Does not require any prior function calls. If load_params = true, the 
+calibrated parameters are preloaded to speed up the calibration.
 """
-function calibrate!(gl::ModelGL)
+function calibrate!(gl::ModelGL;load_params::Bool=false)
+
+    if load_params == true
+        load_parameters_iss!(gl)
+    end
 
     @unpack NE,νY,η,B_4Y,D1_4Y  = gl
     @unpack tol_cali,tol_mkt  = gl
@@ -264,9 +269,10 @@ end
 
 Calibrate the model to the terminal target value (only borrowing constraint)
 Requires a calibrated initital steady-state object.
-Returns a new terminal steady-state object.
+Returns a new terminal steady-state object. If load_params = true, the 
+calibrated parameters are preloaded to speed up the calibration.
 """
-function calibrate_terminal(gl_initial::ModelGL;load_params=false)
+function calibrate_terminal(gl_initial::ModelGL;load_params::Bool=false)
     
     gl = deepcopy(gl_initial)   # terminal steadystate
     gl.ϕ = gl.ϕ₂                # update initial guess
