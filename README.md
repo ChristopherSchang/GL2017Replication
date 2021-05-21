@@ -5,8 +5,8 @@
 This replication study replicates parts of the paper `Credit crises, precautionary savings, and the liquidity trap` (Guerrieri, Lorenzoni (2017)). The code notation mostly follows the original version of the authors in MATLAB.
  
 ## Table of Contents
-
-  - [Example](#example)
+ 
+  - [Get Started](#get-started)
   - [Solving the Model](#solving-the-model)
   - [Calibrating the Steady-State](#calibrating-the-steady-state)
     - [Initial Steady-State](#initial-steady-state)
@@ -17,9 +17,14 @@ This replication study replicates parts of the paper `Credit crises, precautiona
   - [Transition Dynamics](#transition-dynamics)
   - [References](#references)
 
-## Example
+## Get Started
 
-The file main.jl in the src folder contains an example work flow to solve the model.
+To get started, clone the repository to your local machine. Include the GL2017Replication.jl package file into your script and import the package:
+```
+include("GL2017Replication.jl")
+using .GL2017Replication
+```
+(If you work from another directory include with the appropriate path). The file main.jl in the \src folder contains an example work flow to solve the model.
 
 ## Solving the Model
 
