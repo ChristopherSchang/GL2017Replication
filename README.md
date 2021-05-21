@@ -19,12 +19,12 @@ This replication study replicates parts of the paper `Credit crises, precautiona
 
 ## Get Started
 
-To get started, clone the repository to your local machine. Include the GL2017Replication.jl package file into your script and import the package:
+To get started, clone the repository to your local machine. Start Julia and navigate to the \src folder, press `]` to enter the package manager and type `activate .` to activate the package environment. Include the GL2017Replication.jl package file into your script and import the package:
 ```
 include("GL2017Replication.jl")
 using .GL2017Replication
 ```
-(If you work from another directory include with the appropriate path). The file main.jl in the \src folder contains an example work flow to solve the model.
+(Alternatively you can install the package to your dev folder in you Julia installation, see the Julia documentation for details). The file main.jl in the \src folder contains an example work flow to solve the model.
 
 ## Solving the Model
 
